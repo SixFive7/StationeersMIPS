@@ -1,0 +1,100 @@
+define K_TO_C 273.15
+define MIN_CO2_RATIO 0.95
+define MAX_OUTSIDE_TEMP_K 405
+define MIN_INSIDE_PRESSURE 75
+define MAX_INSIDE_PRESSURE 85
+define MIN_INSIDE_TEMPERATURE 298 # 25C
+define MAX_INSIDE_TEMPERATURE 306 # 33C
+
+define SIGN_T 1101240679
+define SignCO2 HASH("SignCO2")
+
+define GAS_SENSOR_T -1252983604
+define SensorInternal HASH("SensorInternal")
+define SensorExternal HASH("SensorExternal")
+
+define TRANSMITTER_T -693235651
+define TransmitterVents HASH("TransmitterVents")
+
+define FILTER_T -348054045
+define FilterRoom HASH("FilterRoom")
+define FilterOutside HASH("FilterOutside")
+
+define ACTIVE_VENT_T -1129453144
+define VentOutside HASH("VentOutside")
+
+define DIGITAL_VALVE_T -1280984102
+define ValveRoom HASH("ValveRoom")
+define ValveCooling HASH("ValveCooling")
+
+define BACK_PRESSURE_REGULATOR_T -1149857558
+define OverPressureRegulator HASH("OverPressureRegulator")
+
+define EVAPORATION_CHAMBER_T -1429782576
+define Cooler HASH("Cooler")
+
+# <Power saving defines>
+define PROXIMITY_SENSOR_T 568800213
+define CONSOLE_T 235638270
+define MONITOR_T 801677497
+define SIGNS_T 1101240679
+define COMPUTER_T -405593895
+# </Power saving defines>
+
+loop:
+yield
+
+# <Power saving script>
+lb r0 PROXIMITY_SENSOR_T Activate Sum
+sb CONSOLE_T On r0
+sb MONITOR_T On r0
+sb SIGNS_T On r0
+sb COMPUTER_T On r0
+# </Power saving script>
+
+alias tmp r0
+alias temperatureOutside r12
+alias temperature r13
+alias pressure r14
+alias co2 r15
+
+# Update displays
+lbn temperature GAS_SENSOR_T SensorInternal Temperature Maximum
+lbn pressure GAS_SENSOR_T SensorInternal Pressure Maximum
+lbn co2 GAS_SENSOR_T SensorInternal RatioCarbonDioxide Maximum
+
+sbn SIGN_T SignCO2 Mode 5
+sbn SIGN_T SignCO2 Setting 0
+sbn SIGN_T SignCO2 Setting co2
+
+# Maintain an atmosphere of primarily CO2
+slt r0 co2 MIN_CO2_RATIO
+sbn TRANSMITTER_T TransmitterVents Setting r0
+sbn FILTER_T FilterRoom On r0
+
+# Maintain atmospheric pressure
+lbn temperatureOutside GAS_SENSOR_T SensorExternal Temperature Maximum
+
+sle r0 temperatureOutside MAX_OUTSIDE_TEMP_K
+slt r1 pressure MIN_INSIDE_PRESSURE
+
+add r0 r0 r1 
+seq r0 r0 2
+sbn FILTER_T FilterOutside On r0
+sbn ACTIVE_VENT_T VentOutside On r0
+sbn DIGITAL_VALVE_T ValveRoom On r0
+
+sgt r0 pressure MAX_INSIDE_PRESSURE
+sbn BACK_PRESSURE_REGULATOR_T OverPressureRegulator Setting MAX_INSIDE_PRESSURE
+sbn BACK_PRESSURE_REGULATOR_T OverPressureRegulator On r0
+
+# Maintain temperature
+lbn r0 DIGITAL_VALVE_T ValveCooling On Maximum # current
+sgt r1 temperature MAX_INSIDE_TEMPERATURE # hot
+sge r2 temperature MIN_INSIDE_TEMPERATURE # ok
+min r2 r0 r2 # current AND ok
+max r0 r1 r2 # hot OR (current AND OOK
+sbn DIGITAL_VALVE_T ValveCooling On r0
+
+
+j loop

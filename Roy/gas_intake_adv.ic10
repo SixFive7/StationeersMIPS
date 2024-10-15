@@ -1,0 +1,116 @@
+define gasIn HASH("T:GasIn")
+define GpaT 435685051
+define gpa HASH("GPA:Intake")
+define gpaOut HASH("A:OUT")
+define GphT -419758574
+define LpaT -2113838091
+define lpa HASH("LPA:Intake")
+define LphT -287495560
+define PurgeT -737232128
+define purge HASH("Purge")
+define CrusherT 443849486
+define crusher HASH("Crusher")
+define TurboT 1310794736
+define turbo HASH("T:OUT")
+define LedT HASH("StructureDiode")
+define crusherLed HASH("LED:Crusher")
+define DisplayT HASH("StructureConsoleLED5")
+define display HASH("DISPLAY")
+define MaxPressureKpa 49000 # 49 MPa
+define MaxPressureTurboKpa 50000 # 50 MPa
+define AmbientPressureKpa 100
+define MinTemperatureK 448 # ~ 175C
+define MinLiquidTemperatureK 273 # 0C
+
+sb GpaT Lock 1
+sb GpaT On 1
+sb GphT Lock 1
+sb GphT On 0
+sb LpaT Lock 1
+sb LpaT On 1
+sb PurgeT Lock 1
+sb PurgeT On 0
+sb CrusherT Lock 1
+sb CrusherT On 0
+sb TurboT Lock 1
+sb TurboT On 0
+sb LedT Lock 1
+sb LedT On 1
+
+sbn DisplayT display Setting 12345
+
+alias out r14
+alias ok r15
+
+loop:
+yield
+move out 66666 # 6 evil, 5 ok
+move ok 1
+
+# Check gas temperature OK
+lbn r0 GpaT gpa VolumeOfLiquid Maximum
+sgt r1 r0 0.25 #  Liter
+sb GphT On r1
+select r2 r1 0 1
+min ok ok r2
+
+mul r0 r2 10000
+sub out out r0
+
+# Check gas pressure OK
+lbn r0 GpaT gpa Pressure  Maximum
+slt r1 r0 MaxPressureKpa
+min ok ok r1
+
+# In case of emergency enable turbo pump
+# and disable gas intake
+sgt r3 r0 MaxPressureTurboKpa
+sbn TurboT turbo On r3
+select r4 r3 0 1
+sbn TurboT gasIn On r4
+
+mul r0 r1 1000
+sub out out r0
+
+# Check liquid temperature OK
+lbn r0 LpaT lpa Temperature Minimum
+slt r1 r0 MinLiquidTemperatureK
+sb LphT On r1
+select r2 r1 0 1
+min ok ok r2
+
+mul r0 r2 100
+sub out out r0
+
+# Check liquid Volume OK
+lbn r0 LpaT lpa Volume Maximum
+lbn r1 LpaT lpa VolumeOfLiquid Maximum
+div r2 r1 r0
+slt r3 r2 0.85
+min ok ok r3
+
+mul r0 r3 10
+sub out out r0
+
+# Check gasses in liquid pipe
+lbn r0 LpaT lpa RatioWater Maximum
+lbn r2 LpaT lpa RatioSteam Maximum
+add r2 r0 r1
+slt r3 r2 0.99 # dirty gas
+sgt r4 r2 0.00 # not empty
+min r5 r3 r4 # not empty & dirty
+sbn PurgeT purge On r5
+select r0 r5 0 1
+min ok ok r0
+
+sub out out r0
+
+# Enable crusher if everything is OK
+sbn CrusherT crusher On ok
+select r1 ok 2 4 # on = Green, off = Red
+sbn LedT crusherLed Color r1
+sbn DisplayT display Color r1
+sbn DisplayT display Setting out
+s db Setting out
+
+j loop

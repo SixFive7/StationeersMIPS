@@ -1,0 +1,25 @@
+define vent HASH("AV:OUT")
+define VentT -1129453144
+define sensor HASH("GS:ROOM")
+define SensorT -1252983604
+
+define PressureOnKpa 94
+define PressureOffKpa 100
+
+alias pressure r10
+alias on r11
+
+sbn VentT vent Lock 1
+sbn VentT vent Setting 10 # 10% speed
+sbn VentT vent Mode 0 # Outward
+
+loop:
+lbn pressure SensorT sensor Pressure Maximum
+
+slt r1 pressure PressureOnKpa
+max on on r1
+
+slt r2 pressure PressureOffKpa
+min on on r2
+
+j loop

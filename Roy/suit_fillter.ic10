@@ -1,0 +1,29 @@
+define MaxPressure 20000
+define MaxLitersPerSecond 50
+define GpaT 435685051
+define analyzer HASH("PA:Oxygen")
+define TurboT 1310794736
+define pump HASH("T:Intake")
+
+sbn GpaT analyzer Lock 1
+sbn GpaT analyzer On 1
+sbn TurboT pump Lock 1
+sbn TurboT pump Setting 30
+sbn TurboT pump On 0
+sbn TurboT pump Lock 1
+sbn TurboT pump On 0
+
+loop:
+yield
+
+lbn r0 GpaT analyzer Pressure Maximum
+slt r1 r0 MaxPressure
+sbn TurboT pump On r1
+
+div r2 r0 MaxPressure # [0..1]
+sub r3 1 r2 # [1..0]
+mul r4 r3 MaxLitersPerSecond # [50..0]
+s db Setting r4
+sbn TurboT pump Setting r4
+
+j loop

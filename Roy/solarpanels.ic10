@@ -1,0 +1,35 @@
+# <Power saving defines>
+define PROXIMITY_SENSOR_T 568800213
+define CONSOLE_T 235638270
+define MONITOR_T 801677497
+define SIGNS_T 1101240679
+define COMPUTER_T -405593895
+# </Power saving defines>
+
+define SOLAR_PANEL_T -934345724
+define DAYLIGHT_SENSOR_T 1076425094
+
+alias horizontal r15
+alias vertical r14
+
+loop:
+yield
+
+lb horizontal DAYLIGHT_SENSOR_T Horizontal Maximum
+lb vertical DAYLIGHT_SENSOR_T Vertical Maximum
+
+add r0 360 horizontal
+sb SOLAR_PANEL_T Horizontal r0
+
+sub r0 90 vertical
+sb SOLAR_PANEL_T Vertical r0 # TODO
+
+# <Power saving script>
+lb r0 PROXIMITY_SENSOR_T Activate Sum
+sb CONSOLE_T On r0
+sb MONITOR_T On r0
+sb SIGNS_T On r0
+sb COMPUTER_T On r0
+# </Power saving script>
+
+j loop

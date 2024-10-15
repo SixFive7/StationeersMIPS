@@ -1,0 +1,94 @@
+define GeneratorT 813146305
+define BatteryT -1388288459
+define LedT 1944485013
+define LeverT 1220484876
+
+alias override r9
+alias status r10
+alias charge r11
+alias generator r12
+alias led r13
+alias threshold r14
+alias end r15
+
+sb GeneratorT On 0
+sb GeneratorT Lock 1
+sb BatteryT On 1
+sb BatteryT Lock 1
+sb LedT Color 4 # RED
+sb LedT On 1
+sb LedT Lock 1
+
+move sp 0 # Initialize stack pointer
+push HASH("GEN0")
+push HASH("LED0")
+push 0.8
+push HASH("GEN1")
+push HASH("LED1")
+push 0.7
+push HASH("GEN2")
+push HASH("LED2")
+push 0.6
+push HASH("GEN3")
+push HASH("LED3")
+push 0.5
+push HASH("GEN4")
+push HASH("LED4")
+push 0.4
+move end sp
+move sp 0
+
+loop:
+yield
+
+add sp sp 1
+peek generator
+add sp sp 1
+peek led
+add sp sp 1
+peek threshold
+
+lb charge BatteryT Ratio Minimum
+lb override LeverT Open Maximum
+
+## Enable appropriate generators ##
+# Set status to current value
+lbn status GeneratorT generator On Maximum
+
+# Enable when charge is below threshold
+slt r0 charge threshold
+max status status r0
+
+# Disable when charge is almost 1.0
+slt r0 charge 0.975
+min status status r0
+
+# Disable when override lever is open
+select r0 override 0 1
+min status status r0
+
+sbn GeneratorT generator On status
+
+## Led Control
+lbn r0 GeneratorT generator On Maximum
+lbn r1 GeneratorT generator PowerGeneration Maximum
+add r2 r1 r0
+
+beq r2 2 healthy # On and generating power
+beq r2 1 starved # On and not generating power
+beq r2 0 standby # Off
+healthy:
+sbn LedT led Color 2 # GREEN
+j next
+
+starved:
+sbn LedT led Color 4 # RED
+j next
+
+standby:
+sbn LedT led Color 0 # BLUE
+next:
+
+blt sp end loop # while sp < end
+move sp 0 # reset sp and restart the program
+j loop

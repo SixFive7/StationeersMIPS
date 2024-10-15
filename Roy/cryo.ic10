@@ -1,0 +1,48 @@
+define GpaT 435685051
+define analyzer HASH("GPA:Intake")
+define TurboT 1310794736
+define pump HASH("T:Intake")
+
+define MaxPressure 700 # KPa
+define MinPressure 150 # KPa
+define MaxTemperature 120 # -153.15C
+
+alias temperature r14
+alias pressure r15
+
+sbn GpaT analyzer Lock 1
+sbn GpaT analyzer On 1
+sbn TurboT pump Lock 1
+sbn TurboT pump Setting 5 # slow down pump
+sbn TurboT pump On 0
+
+loop:
+yield
+
+lbn pressure GpaT analyzer Pressure Maximum
+lbn temperature GpaT analyzer Temperature Maximum
+
+# If the pressure is below the maximum
+# pressure always turn on the pump
+blt pressure MinPressure presureTooLow
+
+# If the pressure is above the maximum
+# pressure always turn the pump off
+bgt pressure MaxPressure pressureTooHigh
+
+pressureOk:
+# If the pressure is in the safe zone
+# turn it on if the temperature is OK
+slt r0 temperature MaxTemperature
+sbn TurboT pump On r0
+
+
+j loop
+presureTooLow:
+sbn TurboT pump On 1
+
+j loop
+pressureTooHigh:
+sbn TurboT pump On 0
+
+j loop

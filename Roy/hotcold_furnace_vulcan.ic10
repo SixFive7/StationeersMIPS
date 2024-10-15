@@ -1,0 +1,82 @@
+# Hot/Cold Furnace setup for vulance
+
+# Setup
+define FILTER_T -348054045 # Atmospheric filter
+define VENT_T -1129453144 # Active vent
+define SENSOR_T -1252983604 # Gas sensors
+define TANK_T 272136332 # Gas tank
+
+define HOT_FILTER HASH("Filt_Hot")
+define HOT_VENT HASH("Vent_Hot")
+define HOT_TANK HASH("Tank_Hot")
+
+define COLD_FILTER HASH("Filt_Cold")
+define COLD_VENT HASH("Vent_Cold")
+define COLD_TANK HASH("Tank_Cold")
+
+define TEMP_SENSOR HASH("Temp_Sensor")
+
+define HOT_K 980
+define COLD_K 405
+define SAFE_PRESSURE 30000
+
+# Turn controlled elements off and lock them
+sbn VENT_T HOT_VENT On 0
+sbn VENT_T HOT_VENT Lock 1
+sbn FILTER_T HOT_FILTER On 0
+sbn FILTER_T HOT_FILTER Lock 1
+
+sbn VENT_T COLD_VENT On 0
+sbn VENT_T COLD_VENT Lock 1
+sbn FILTER_T COLD_FILTER On 0
+sbn FILTER_T COLD_FILTER Lock 1
+
+alias temperature r0
+alias coldPressure r1
+alias hotPressure  r2
+alias isHot r3
+
+loop:
+yield
+
+lbn temperature SENSOR_T TEMP_SENSOR Temperature Maximum
+lbn coldPressure TANK_T COLD_TANK Pressure Maximum
+lbn hotPressure TANK_T HOT_TANK Pressure Maximum
+
+
+cold:
+bgt temperature COLD_K hot
+bgt coldPressure SAFE_PRESSURE hot
+sbn FILTER_T COLD_FILTER On 1
+sbn VENT_T COLD_VENT On 1
+
+sbn FILTER_T HOT_FILTER On 0
+sbn VENT_T HOT_VENT On 0
+
+j end
+
+hot:
+blt temperature HOT_K neither
+bgt coldPressure SAFE_PRESSURE neither:
+
+sbn FILTER_T COLD_FILTER On 0
+sbn VENT_T COLD_VENT On 0
+
+sbn FILTER_T HOT_FILTER On 1
+sbn VENT_T HOT_VENT On 1
+
+j end
+
+neither:
+
+sbn FILTER_T COLD_FILTER On 0
+sbn VENT_T COLD_VENT On 0
+
+sbn FILTER_T HOT_FILTER On 0
+sbn VENT_T HOT_VENT On 0
+
+end:
+
+j loop
+
+##########################################################################################

@@ -1,0 +1,104 @@
+# We work with 10 minute days, while the wiki does with 20
+define LIGHT_PER_DAY 350
+define DARKNESS_PER_DAY 150
+define TIME_PER_DAY 600
+
+define LIQUID_WARNING_TRESHOLD 2
+
+define GROW_LIGHT_T -1758710260
+define GLR0 HASH("GLR0")
+define GLR1 HASH("GLR1")
+
+define WINDOW_SHUTTER_T -2078371660
+define ShutterController HASH("ShutterController")
+
+define DAYLIGHT_SENSOR_T 1076425094
+define DaylightSensor HASH("DaylightSensor")
+
+define FLASHING_LIGHT_T -1535893860
+define WaterWarningLight HASH("WaterWarningLight")
+
+define LIQUID_PIPE_ANALYZER_T -2113838091
+define WaterAnalyzer HASH("WaterAnalyzer")
+
+define MEMORY_T -851746783
+define kDark HASH("kDark")
+define kLight HASH("kLight")
+define kTime HASH("kTime")
+
+# <Power saving defines>
+define PROXIMITY_SENSOR_T 568800213
+define CONSOLE_T 235638270
+define MONITOR_T 801677497
+define SIGNS_T 1101240679
+define COMPUTER_T -405593895
+# </Power saving defines>
+
+alias inArtificialSunlight r6
+alias needDarkness r7
+alias needLight r8
+alias inDarkness r9
+alias inSunlight r10
+alias time r11
+alias timeInDarkness r12
+alias timeInSunlight r13
+
+# Initialize with daylight
+move time 250
+move timeInSunlight 0
+move timeInDarkness 151
+
+loop:
+# <Power saving script>
+lb r0 PROXIMITY_SENSOR_T Activate Sum
+sb CONSOLE_T On r0
+sb MONITOR_T On r0
+sb SIGNS_T On r0
+sb COMPUTER_T On r0
+# </Power saving script>
+
+sleep 1 # for 1 second
+add time time 1
+
+# Check current conditions
+lbn inSunlight DAYLIGHT_SENSOR_T DaylightSensor Activate Minimum
+slt inDarkness inSunlight 1
+
+# Only close the window shutters if we need darkness
+sle needDarkness timeInDarkness DARKNESS_PER_DAY
+slt r0 needDarkness 1 # NOT need darkness
+sbn WINDOW_SHUTTER_T ShutterController Open r0
+
+# Enable the grow lights if we did not see enough sun
+sub r0 TIME_PER_DAY time  # Time left
+sub r1 LIGHT_PER_DAY timeInSunlight # Sunlight still required today
+sle inArtificialSunlight r0 r1 # time left <= sunlight still required today
+sbn GROW_LIGHT_T GLR0 On inArtificialSunlight
+sbn GROW_LIGHT_T GLR1 On inArtificialSunlight
+
+s db Setting inArtificialSunlight
+
+# Update the time in the sun/dark
+or r0 inSunlight inArtificialSunlight # in sunlight OR in artificial light
+add timeInSunlight timeInSunlight r0
+
+slt r0 r0 1
+add timeInDarkness timeInDarkness r0
+
+# Water warning
+lbn r0 LIQUID_PIPE_ANALYZER_T WaterAnalyzer VolumeOfLiquid Maximum
+slt r0 r0 LIQUID_WARNING_TRESHOLD
+sbn FLASHING_LIGHT_T WaterWarningLight On r0
+
+# Update displays
+sbn MEMORY_T kDark Setting timeInDarkness
+sbn MEMORY_T kLight Setting timeInSunlight
+sbn MEMORY_T kTime Setting time
+
+# Reset timers after a full day
+blt time TIME_PER_DAY loop
+move time 0
+move timeInSunlight 0
+move timeInDarkness 0
+
+j loop
