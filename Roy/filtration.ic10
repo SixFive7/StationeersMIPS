@@ -1,0 +1,123 @@
+define FilterT HASH("StructureFiltration")
+define AnalyzerT HASH("StructurePipeAnalysizer")
+define HeaterT HASH("StructurePipeHeater")
+define DiodeT HASH("StructureDiodeSlide")
+define ValveT HASH("StructureDigitalValve")
+define PumpT HASH("StructureTurboVolumePump")
+define MaxPressure 10000 # 10MPa
+alias filter r0
+alias analyzer r1
+alias heater r2
+alias diode r3
+alias valve r5
+alias pump r6
+alias pressure r9
+alias pumpPress r14
+alias liquids r10
+
+move sp 0 # Initialize stack pointer
+# Oxygen
+push HASH("F:OXY")
+push HASH("A:OXY")
+push HASH("H:OXY")
+push HASH("D:OXY")
+push HASH("V:OXY")
+push HASH("T:OXY")
+# Carbon Dioxide
+push HASH("F:CO2")
+push HASH("A:CO2")
+push HASH("H:CO2")
+push HASH("D:CO2")
+push HASH("V:CO2")
+push HASH("T:CO2")
+# Pollutants
+push HASH("F:POL")
+push HASH("A:POL")
+push HASH("H:POL")
+push HASH("D:POL")
+push HASH("V:POL")
+push HASH("T:POL")
+# Nitrous Oxide
+push HASH("F:N2O")
+push HASH("A:N2O")
+push HASH("H:N2O")
+push HASH("D:N2O")
+push HASH("V:N2O")
+push HASH("T:N2O")
+# Hydrogen Dioxide
+push HASH("F:H2O")
+push HASH("A:H2O")
+push HASH("H:H2O")
+push HASH("D:H2O")
+push HASH("V:H2O")
+push HASH("T:H2O")
+# Nitrogen
+push HASH("F:NIT")
+push HASH("A:NIT")
+push HASH("H:NIT")
+push HASH("D:NIT")
+push HASH("V:NIT")
+push HASH("T:NIT")
+# Volatiles
+push HASH("F:VOL")
+push HASH("A:VOL")
+push HASH("H:VOL")
+push HASH("D:VOL")
+push HASH("V:VOL")
+push HASH("T:VOL")
+
+# Store stack size then iterate
+alias end r15
+move end sp
+move sp 0
+loop:
+
+add sp sp 1
+peek filter
+add sp sp 1
+peek analyzer
+add sp sp 1
+peek heater
+add sp sp 1
+peek diode
+add sp sp 1
+peek valve
+add sp sp 1
+peek pump
+
+sbn FilterT filter Lock 1
+sbn HeaterT heater Lock 1
+sbn AnalyzerT analyzer On 1
+sbn ValveT valve Lock 1
+sbn ValveT valve Setting 1
+sbn PumpT pump Lock 1
+
+lbn pressure AnalyzerT analyzer Pressure Maximum
+lbn liquids AnalyzerT analyzer VolumeOfLiquid Maximum
+lbn pumpPress FilterT filter PressureOutput Maximum
+
+# Filter On/Off and Valve Off/On
+sapz r11 liquids 0.01
+slt r12 pressure MaxPressure
+min r8 r11 r12
+sbn FilterT filter On r8
+select r9 r8 0 1
+sbn ValveT valve On r9 
+
+# Pump On/Off
+sgt r8 pumpPress 0
+sbn PumpT pump On r8
+
+# Heater On/Off
+snaz r12 liquids 0.01
+sbn HeaterT heater On r12
+
+# Let the diode show % of max pressure
+div r13 pressure MaxPressure
+max r13 r13 0.05
+sbn DiodeT diode Setting r13
+
+blt sp end loop # while sp < end
+move sp 0 # reset sp and restart the program
+yield
+j loop

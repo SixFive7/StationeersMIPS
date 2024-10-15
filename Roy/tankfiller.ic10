@@ -1,0 +1,34 @@
+define MaxPressure 20000
+define MaxLitersPerSecond 50
+define StorageT HASH("StructureGasTankStorage")
+define oxy HASH("GTS:Oxygen")
+define waste HASH("GTS:Waste")
+
+define TurboT 1310794736
+define in HASH("T:Oxygen")
+
+define out HASH("T:Waste")
+
+sbn TurboT in Lock 1
+sbn TurboT in Setting 30
+sbn TurboT in On 0
+sbn TurboT out Lock 1
+sbn TurboT out On 0
+
+loop:
+
+lbn r0 StorageT oxy Pressure Maximum
+slt r1 r0 MaxPressure
+sbn TurboT in On r1
+
+div r2 r0 MaxPressure # [0..1]
+sub r3 1 r2 # [1..0]
+mul r4 r3 MaxLitersPerSecond # [50..0]
+s db Setting r4
+sbn TurboT in Setting r4
+
+lbn r0 StorageT waste Pressure Maximum
+sgtz r1 r0
+sbn TurboT out On r1
+
+j loop

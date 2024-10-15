@@ -1,0 +1,169 @@
+define CHUTE_IMPORT_BIN_T -850484480
+define CHUTE_EXPORT_BIN_T 1957571043
+define NextItemBin HASH("NextItemBin")
+
+define STACKER_T -2020231820
+
+define MEMORY_T -851746783
+define mHash HASH("mHash")
+define mCount HASH("mCount")
+define mMin HASH("mMin")
+define mSlotMin HASH("mSlotMin")
+define mMax HASH("mMax")
+define mSlotMax HASH("mSlotMax")
+
+define LARRE_CARGO_T -1555459562
+define LarRECounter HASH("LarRECounter")
+define PICKUP_STATION 3
+define BASE_STATION 2
+
+define VENDING_MACHINE_T -443130773
+define Vend0 HASH("Vend0")
+define MIN_SLOT_INDEX 2
+define MAX_SLOT_INDEX 101
+
+define PLASTIC_SHEET_T 662053345
+
+sb STACKER_T Mode 1 
+
+alias maxSlot r6
+alias maxQuantity r7
+alias minSlot r8
+alias minQuantity r9
+alias topOfStack r10
+alias count r11
+alias index r12
+alias vendingMachine r13
+alias itemHash r14
+alias targetStation r15
+
+loop:
+yield
+
+jal updateChutes
+
+push 1 # HARD CODED TARGET STATION
+lbns r0 CHUTE_EXPORT_BIN_T NextItemBin 0 Occupied Maximum
+bnezal r0 importItem
+move sp 0 # Clear stack in case we don't jump
+
+push PLASTIC_SHEET_T
+jal countItem
+
+j loop
+
+##############
+countItem:
+##############
+pop itemHash
+push ra
+move count 0
+move minSlot 9999
+move minQuantity 9999
+move maxSlot 9999
+move maxQuantity 0
+
+# Remember the current value of the stack pointer,
+# then add all vending machines to the stack
+move topOfStack sp 
+jal pushAllVendingMachines
+# For each vending machine
+ci0:
+pop vendingMachine
+move index MIN_SLOT_INDEX
+# For each slot in vendingMachine
+ci1:
+lbns r0 VENDING_MACHINE_T vendingMachine index OccupantHash Maximum
+lbns r1 VENDING_MACHINE_T vendingMachine index Quantity Maximum
+seq r0 r0 itemHash
+mul r0 r0 r1 
+add count count r0
+
+beqz r0 ci3
+    bge r1 minQuantity ci2
+        move minSlot index
+        move minQuantity r1    
+ci2:
+    blt r1 maxQuantity ci3
+        move maxSlot index
+        move maxQuantity r1
+ci3:
+
+add index index 1
+ble index MAX_SLOT_INDEX ci1 
+bgt sp topOfStack ci0
+
+sbn MEMORY_T mHash Setting itemHash
+sbn MEMORY_T mCount Setting count
+sbn MEMORY_T mMin Setting minQuantity
+sbn MEMORY_T mSlotMin Setting minSlot
+sbn MEMORY_T mSlotMax Setting maxSlot
+sbn MEMORY_T mMax Setting maxQuantity
+
+pop ra
+j ra
+
+##############
+importItem:
+##############
+
+pop r0
+push ra
+push r0
+
+push PICKUP_STATION
+jal moveAndWait
+
+jal activate
+
+push BASE_STATION
+jal moveAndWait
+
+pop targetStation
+push targetStation
+jal moveAndWait
+
+jal activate
+
+push BASE_STATION
+jal moveAndWait
+
+pop ra
+j ra
+
+##############
+updateChutes:
+##############
+lbs r0 CHUTE_IMPORT_BIN_T 0 Occupied Maximum
+select r1 r0 0 1
+sb CHUTE_IMPORT_BIN_T Open r1
+
+lbs r0 CHUTE_EXPORT_BIN_T 0 Occupied Maximum
+sb CHUTE_EXPORT_BIN_T Open r0
+
+j ra
+
+##############
+moveAndWait:
+##############
+pop targetStation
+sbn LARRE_CARGO_T LarRECounter Setting targetStation
+moveAndWaitC:
+lbn r0 LARRE_CARGO_T LarRECounter PositionX Maximum
+bne r0 targetStation moveAndWaitC
+
+j ra
+
+##############
+activate:
+##############
+sbn LARRE_CARGO_T LarRECounter Activate 1
+sleep 1
+j ra
+
+##############
+pushAllVendingMachines:
+##############
+push Vend0
+# vend 2.. vend 3.. vend 4
+j ra

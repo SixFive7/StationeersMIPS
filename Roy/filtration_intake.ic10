@@ -1,0 +1,60 @@
+alias DEBUG db
+define gpa HASH("GPA:Intake")
+define GpaT 435685051
+define GphT -419758574
+define lpa HASH("LPA:Intake")
+define LpaT -2113838091
+define LphT -287495560
+define purge HASH("Purge")
+define PurgeT -737232128
+define crusher HASH("Crusher")
+define CrusherT 443849486
+
+define MaxPressureKpa 20000
+define AmbientPressureKpa 100
+define MinTemperatureK 290 # ~ 17C
+
+sb GphT Lock 1
+sb LphT Lock 1
+sbn PurgeT purge Lock 1
+sbn CrusherT crusher Lock 1
+
+loop:
+yield
+# Turn on ice crusher if pressures are safe
+lbn r0 GpaT gpa Pressure Maximum
+slt r1 r0 MaxPressureKpa
+lbn r0 LpaT lpa Pressure Maximum
+slt r2 r0 AmbientPressureKpa
+min r0 r1 r2
+sbn CrusherT crusher On r0
+
+# Turn on heaters if there are liquids
+# in the gas pipe
+lbn r0 GpaT gpa VolumeOfLiquid Maximum
+lbn r1 GpaT gpa Pressure Maximum
+snaz r2 r0 0.01
+sgt r3 r1 0
+min r4 r2 r3
+sb GphT On r4
+
+# Turn on heaters if liquids in the
+# liquid pipe are freezing
+lbn r0 LpaT lpa Temperature Minimum
+lbn r1 LpaT lpa VolumeOfLiquid Maximum
+slt r2 r0 MinTemperatureK
+snaz r3 r1 0.01
+min r4 r2 r3 
+sb LphT On r4
+
+# Turn on purge valve if something else than H2O
+# gas (steam) is in the liquid pipes
+lbn r0 LpaT lpa RatioWater Maximum
+lbn r1 LpaT lpa RatioSteam Maximum
+add r2 r0 r1
+slt r3 r2 0.99 # 1 = Not everything water/steam
+sgt r4 r2 0.00 # 1 = Not empty
+min r5 r3 r4 # 1 = not empty & dirty
+sbn PurgeT purge On r5
+
+j loop

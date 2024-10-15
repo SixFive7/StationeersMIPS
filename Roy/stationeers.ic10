@@ -1,0 +1,123 @@
+alias DEBUG db
+define furnace HASH("Furnace")
+define FurnaceT 545937711
+define gasMixer HASH("GM: FI")
+define GasMixerT 2104106366
+define led HASH("LED: State")
+define LedT -815193061
+define lever HASH("Lever: Furnace Autopilot")
+define LeverT 1220484876
+define dialTemp HASH("Dial: Target Temperature")
+define dialPres HASH("Dial: Target Pressure")
+define DialT 554524804
+# https://stationeers-wiki.com/Data_Network_Colors
+define kBlue 0
+define kGrey 1
+define kGreen 2
+define kOrange 3
+define kRed 4
+define kYellow 5
+define kWhite 6
+define kBlack 7
+define kBrown 8
+define kKhaki 9
+define kPink 10
+define kPurple 11
+define kFuel 100
+define kNitrogen 0
+define kOutMin 1
+define kOutMax 25
+
+idle:
+# When idle stop adding fuel
+# and dispose of heat
+sbn GasMixerT gasMixer On 0
+sbn FurnaceT furnace On 1
+sbn FurnaceT furnace SettingOutput 100
+loop:
+yield
+# 00: idle - Grey
+# 11: TempLowPresLow  - Blue
+# 91: TempHighPresLow - Orange
+# 19: TempLowPresHigh - Purle
+# 99: TempHighPresHigh - Red
+# Reseting colors here adds nice blink effect
+sbn LedT led Color kGrey
+sbn LedT led Setting 0
+
+lbn r0 LeverT lever Open Maximum
+beqz r0 idle  # idle while lever is closed
+
+# Activate the furnace
+# - Input is always open
+# - Pressure is regulated by
+#   turning the gas mixer on or off
+sbn FurnaceT furnace SettingInput 100
+sbn FurnaceT furnace On 1
+sbn FurnaceT furnace Activate 1
+
+alias rPres r0
+alias rTemp r1
+alias rTPres r2
+alias rTTemp r3
+lbn rPres FurnaceT furnace Pressure Maximum
+lbn rTemp FurnaceT furnace Temperature Maximum
+lbn rTPres DialT dialPres Setting Maximum
+lbn rTTemp DialT dialTemp Setting Maximum
+mul rTPres rTPres 100 # 100xPa to Pa
+mul rTTemp rTTemp 100 # 100xKelvin to Kelvin
+alias rTempLow r4
+alias rTempHigh r5
+alias rPresLow r6
+alias rPresHigh r7
+
+alias rTempLowPresLow r8
+alias rTempHighPresLow r9
+alias rTempLowPresHigh r10
+alias rTempHighPresHigh r11
+
+slt rTempLow rTemp rTTemp
+sge rTempHigh rTemp rTTemp
+slt rPresLow rPres rTPres
+sge rPresHigh rPres rTPres
+
+and rTempLowPresLow rTempLow rPresLow
+and rTempHighPresLow rTempHigh rPresLow
+and rTempLowPresHigh rTempLow rPresHigh
+and rTempHighPresHigh rTempHigh rPresHigh
+
+LowLow:
+beqz rTempLowPresLow HighLow
+sbn LedT led Color kBlue
+sbn LedT led Setting 11
+sbn GasMixerT gasMixer Setting kFuel
+sbn GasMixerT gasMixer On 1
+sbn FurnaceT furnace SettingOutput kOutMin
+j loop
+
+HighLow:
+beqz rTempHighPresLow LowHigh
+sbn LedT led Color kOrange
+sbn LedT led Setting 91
+sbn GasMixerT gasMixer Setting kNitrogen
+sbn GasMixerT gasMixer On 1
+sbn FurnaceT furnace SettingOutput kOutMin
+j loop
+
+LowHigh:
+beqz rTempLowPresHigh HighHigh
+sbn LedT led Color kPurple
+sbn LedT led Setting 19
+sbn GasMixerT gasMixer Setting kFuel
+sbn GasMixerT gasMixer On 1
+sbn FurnaceT furnace SettingOutput kOutMax
+j loop
+
+HighHigh:
+# Last possible option
+sbn LedT led Color kRed
+sbn LedT led Setting 99
+sbn GasMixerT gasMixer Setting kNitrogen
+sbn GasMixerT gasMixer On 0
+sbn FurnaceT furnace SettingOutput kOutMax
+j loop

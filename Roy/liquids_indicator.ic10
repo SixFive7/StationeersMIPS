@@ -1,0 +1,19 @@
+define DiodeT HASH("StructureDiodeSlide")
+define Indicator HASH("D:WATER")
+define AnalyzerT HASH("-2113838091")
+define Analyzer HASH("A:WATER")
+
+# Reset debug display
+s db Setting 0
+
+loop:
+
+# Let the diode show % of max liquids
+lbn r0 AnalyzerT Analyzer VolumeOfLiquid Maximum
+lbn r1 AnalyzerT Analyzer Volume Maximum
+div r2 r0 r1
+max r2 r2 0.05
+sbn DiodeT Indicator Setting r2
+
+yield
+j loop

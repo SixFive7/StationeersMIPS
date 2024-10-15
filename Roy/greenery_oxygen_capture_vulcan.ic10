@@ -1,0 +1,32 @@
+# Assumes we are housed in the filtration unit
+
+define ACTIVATION_PRESSURE 1000 # 1MP
+define DEACTIVATION_PRESSURE 50 # 50kPa
+
+s db Mode 0
+
+alias pressure r0
+alias currentMode r1
+alias highPressure r2
+alias okPressure r3
+alias shouldStayActive r4
+alias shouldActivate r5
+alias nextMode r6
+
+loop:
+yield
+
+l currentMode db Mode
+l pressure db PressureInput
+
+sgt highPressure pressure ACTIVATION_PRESSURE
+sgt okPressure pressure DEACTIVATION_PRESSURE
+
+move shouldActivate highPressure
+and shouldStayActive okPressure currentMode
+
+or nextMode shouldActivate shouldStayActive
+
+s db Mode nextMode
+
+j loop

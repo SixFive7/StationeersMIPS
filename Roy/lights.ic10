@@ -1,0 +1,21 @@
+define LightUpstairsT HASH("StructureLightLong")
+define LightDownstairsT HASH("StructureLightRound")
+define OccupancyT HASH("StructureOccupancySensor")
+define OcDownstairs HASH("OC:Downstairs")
+define OcUpstairs HASH("OC:Upstairs")
+
+sb LightUpstairsT Lock 1
+sb LightUpstairsT On 0
+sb LightDownstairsT Lock 1
+sb LightDownstairsT On 0
+
+loop:
+yield
+
+lbn r0 OccupancyT OcDownstairs Activate Maximum
+sb LightDownstairsT On r0
+
+lbn r0 OccupancyT OcUpstairs Activate Maximum
+sb LightUpstairsT On r0
+
+j loop

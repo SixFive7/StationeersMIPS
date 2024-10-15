@@ -1,0 +1,16 @@
+# <Power saving defines>
+define PROXIMITY_SENSOR_T 568800213
+define CONSOLE_T 235638270
+define MONITOR_T 801677497
+define SIGNS_T 1101240679
+define COMPUTER_T -405593895
+# </Power saving defines>
+
+
+# <Power saving script>
+lb r0 PROXIMITY_SENSOR_T Activate Sum
+sb CONSOLE_T On r0
+sb MONITOR_T On r0
+sb SIGNS_T On r0
+sb COMPUTER_T On r0
+# </Power saving script>

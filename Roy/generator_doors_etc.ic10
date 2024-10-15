@@ -1,0 +1,85 @@
+define BatteryT -1388288459
+define VentT 938836756
+define DoorT -324331872
+define LeverT 1220484876
+define AtmosT -1252983604
+define DisplayT -815193061
+
+define GREEN 2
+define RED 4
+
+sb VentT On 1
+sb VentT Mode 1
+sb VentT Lock 1
+sb DoorT Open 0
+sb DoorT Lock 1
+sb DisplayT Mode 1
+
+alias memory r7
+alias ventilatorsOn r8
+alias ventilatorsOff r9
+alias charge r10
+alias doorOpen r11
+alias doorClosed r12
+alias overrideOpen r13
+alias overrideClosed r14
+alias pressureHigh r15
+
+loop:
+yield
+
+lb charge BatteryT Ratio Average
+lb doorOpen DoorT Open Maximum
+select doorClosed doorOpen 0 1
+lb overrideOpen LeverT Open Maximum
+select overrideClosed overrideOpen 0 1
+
+lb r0 AtmosT Pressure Maximum
+sgtz pressureHigh r0
+
+# Visualize charge levels in %
+# and color based on if we are draining
+# or charging the batteries
+sb DisplayT Setting charge
+
+bge charge memory charging
+discharging:
+sb DisplayT Color RED
+j endLed
+charging:
+sb DisplayT Color GREEN
+endLed:
+
+move memory charge
+
+# If the door is open, but the lever is closed
+# close the door
+and r0 overrideClosed doorOpen 
+beqz r0 doorOk
+sb DoorT Open 0
+doorOk:
+
+# Enable/Disable the ventilator when
+# the door is closed and pressure
+# is greater than zero
+and ventilatorsOn pressureHigh doorClosed
+sb VentT On ventilatorsOn
+
+select ventilatorsOff ventilatorsOn 0 1
+
+# Allow manual control of the door
+# when the override is open and the 
+# ventilators are off
+and r0 overrideOpen ventilatorsOff
+select r1 r0 0 1
+sb DoorT Lock r1
+
+mul r0 pressureHigh 100
+mul r1 doorClosed 10
+add r2 r0 r1
+add r2 r2 overrideOpen
+
+# Pressure DoorClosed OverrideOpen
+s db Setting r2
+
+j loop

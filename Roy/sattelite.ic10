@@ -1,0 +1,88 @@
+# Good traders
+# Stellar Steam:  oxygen and other gasses ContactTypeId -470575659
+# Nebula Nucleus: sell ores for money  ContactTypeId 54412100
+# Gas For Less: buy oyxgen and other gasses ContactTypeId HASH("GasForLess")
+# https://www.reddit.com/r/Stationeers/comments/10uf7u8/beta_some_notes_on_using_the_new_satellite_dishes/
+define GasTraderType HASH("GasForLess")
+
+define SMALL_SATTELITE_DISH_T -2138748650
+define Dish HASH("Dish")
+
+define MEMORY_T -851746783
+define mVertical HASH("mVertical")
+define mHorizontal HASH("mHorizontal")
+define mSignal HASH("mSignal")
+define mPower HASH("mPower")
+define mRequiredPower HASH("mRequiredPower")
+define mReceivingPower HASH("mReceivingPower")
+
+define LEVER_T 1220484876
+define ManualOverride HASH("Manual Override")
+
+define DIAL_T 554524804
+define dHorizontal HASH("dHorizontal")
+define dVertical HASH("dVertical")
+define dPower HASH("dPower")
+
+# <Power saving defines>
+define PROXIMITY_SENSOR_T 568800213
+define CONSOLE_T 235638270
+define MONITOR_T 801677497
+define SIGNS_T 1101240679
+define COMPUTER_T -405593895
+# </Power saving defines>
+
+sbn SMALL_SATTELITE_DISH_T Dish On 1
+
+alias horizontal r15
+alias vertical r14
+alias signal r13
+alias power r12
+alias requiredPower r11
+alias receivingPower r10
+
+loop:
+yield
+# <Power saving script>
+lb r0 PROXIMITY_SENSOR_T Activate Sum
+sb CONSOLE_T On r0
+sb MONITOR_T On r0
+sb SIGNS_T On r0
+sb COMPUTER_T On r0
+# </Power saving script>
+
+# Current Sattelite settings
+lbn horizontal SMALL_SATTELITE_DISH_T Dish Horizontal Maximum
+lbn vertical SMALL_SATTELITE_DISH_T Dish Vertical Maximum
+lbn power SMALL_SATTELITE_DISH_T Dish Setting Maximum
+
+# Signal settings, can be -1 while acquiring target
+lbn signal SMALL_SATTELITE_DISH_T Dish SignalStrength Maximum
+lbn requiredPower SMALL_SATTELITE_DISH_T Dish MinimumWattsToContact Maximum
+lbn receivingPower SMALL_SATTELITE_DISH_T Dish WattsReachingContact Maximum
+
+# Update displays
+sbn MEMORY_T mVertical Setting vertical
+sbn MEMORY_T mHorizontal Setting horizontal
+sbn MEMORY_T mSignal Setting signal
+sbn MEMORY_T mPower Setting power
+sbn MEMORY_T mRequiredPower Setting requiredPower
+sbn MEMORY_T mReceivingPower Setting receivingPower
+
+# Manual control
+lbn r0 LEVER_T ManualOverride Setting Maximum
+beqz r0 automatic
+
+lbn horizontal DIAL_T dHorizontal Setting Maximum
+lbn vertical DIAL_T dVertical Setting Maximum
+lbn power DIAL_T dPower Setting Maximum
+
+sbn SMALL_SATTELITE_DISH_T Dish Horizontal horizontal
+sbn SMALL_SATTELITE_DISH_T Dish Vertical vertical
+sbn SMALL_SATTELITE_DISH_T Dish Setting power
+
+j loop
+# Automatic control
+automatic:
+
+j loop
