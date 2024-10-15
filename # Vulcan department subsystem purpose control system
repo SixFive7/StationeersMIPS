@@ -1,0 +1,15 @@
+# Vulcan department subsystem purpose control system
+
+# Variables
+
+# Device definitions
+
+# Setup
+
+# Run program just once per tick
+start:
+yield
+
+j start # Repeat program
+# Max line width
+##########################################################################################

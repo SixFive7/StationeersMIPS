@@ -1,0 +1,49 @@
+# Vulcan thermodynamics atmosphere exhaust control system
+
+# Variables
+define ActivationPressure   1800    # Dangerous condensation point
+define DeactivationPressure  250    # Ambient pressure
+
+# Device definitions
+define Analyzers        435685051   # Gas pipe analyzers
+define Vents           -0785498334  # Large powered vents
+define Lights          -1535893860  # Flashing light
+define GasSensors      -1252983604  # Gas sensors
+define Memory          -851746783   # Logic memory
+define MemoryExhaust            HASH("Exhaust pressure memory")
+define MemoryVulcan             HASH("Vulcan pressure memory")
+
+# Setup
+sb Vents Lock 1                     # Lock manual controls
+sb Vents Mode 0                     # Outward
+sb Vents On 0                       # Disable
+sb Vents PressureExternal 100000    # No throttling
+sb Analyzers Lock 1                 # Lock manual controls
+sb Analyzers On 1                   # Enable
+sb Lights Lock 1                    # Lock manual controls
+sb Lights On 0                      # Disable
+
+# Run program just once per tick
+start:
+yield
+
+# Hysteresis
+lb r0 Analyzers Pressure Maximum    # Read the exhaust pressure
+sgt r1 r0 DeactivationPressure      # Check if not vacuum
+and r10 r10 r1                      # True if already true AND not vacuum
+sge r1 r0 ActivationPressure        # Check if over max pressure
+or r10 r10 r1                       # True if already true OR over pressure
+
+# Toggle devices
+sb Vents On r10                     # Turn on vents if activated
+sb Lights On r10                    # Turn on light if activated
+
+# Write to graph console memory memory banks
+lb r0 GasSensors Pressure Maximum
+lb r1 Analyzers Pressure Maximum
+sbn Memory MemoryExhaust Setting r0
+sbn Memory MemoryVulcan Setting r1
+
+j start # Repeat program
+# Max line width
+##########################################################################################

@@ -1,0 +1,132 @@
+# Vulcan thermodynamics atmosphere intake control system
+
+# Text labels
+# <voffset=-0.25em><sprite name=warning_23>{}°
+# <voffset=-0.25em><sprite name=liquid_4>{}°
+# <voffset=-0.25em><sprite name=warning_15>{}%
+# <voffset=-0.25em><sprite name=warning_43>
+
+# Variables
+define NightTemperature   403.15 # 130 celsius
+define IntakeMaxPressure  45000  # Max before gas pipe stress (48636) with spare room
+define CoolantMaxPressure 4477   # Max before liquid pipe stress (4863,6) with spare room
+define TargetTemperature  75     # In degrees
+define IntakePipeCapacity 6140   # Capacity of intake gas pipe network
+define IntakeMaxStress    10     # Stress threshold in %
+define Sign0                       HASH("0")
+define Sign1                       HASH("1")
+define Sign2                       HASH("2")
+
+# Device definitions
+define Vents           -0785498334 # Large powered vents
+define Regulators      -1149857558 # Back pressure regulators
+define PurgeValves     -0737232128 # Purge valves
+define GasSensors      -1252983604 # Gas sensors
+define Analyzers        0435685051 # Gas pipe analyzers
+define Tanks           -1430440215 # Large insulated liguid tanks
+define FlashingLights  -1535893860 # Flashing light
+define Levers           1220484876 # Section emergency breaker
+define Proximities      0568800213 # Proximity sensors
+define Lights          -0444430760 # Small flood lights
+define Computers       -0405593895 # Retro computers
+define Signs           -0659896099 # Programmable signs 1x2
+
+# Setup
+sb Vents Lock 1                           # Lock manual controls
+sb Vents Mode 1                           # Inward
+sb Vents PressureExternal 0               # No throttling
+sb Vents On 0                             # Disable
+sb Regulators Lock 1                      # Lock manual controls
+sb Regulators Setting IntakeMaxPressure   # Set overpressure safety
+sb Regulators On 1                        # Enable
+sb PurgeValves Lock 1                     # Lock manual controls
+sb PurgeValves Setting CoolantMaxPressure # Set overpressure safety
+sb PurgeValves On 1                       # Enable
+sb Analyzers Lock 1                       # Lock manual controls
+sb Analyzers On 1                         # Enable
+sb FlashingLights Lock 1                  # Lock manual controls
+sb FlashingLights On 0                    # Disable
+sb Proximities Setting 10                 # Somebody is close
+sb Signs Mode 4                           # Variable text mode
+
+# Run program just once per tick
+start:
+yield
+
+# User proximity device (de)activation
+lb r0 Proximities Activate Sum   # If somebody is near
+sb Lights On r0                  # Turn all lights on
+sb Computers On r0               # Turn all computers on
+sb Signs On r0                   # Turn all signs on
+
+# Evaporate at max speed if below target temperature
+add r0 TargetTemperature 273.1    # Get target in kelvin
+lb r1 Tanks Temperature Sum       # Get tank temperature
+sgt r0 r1 r0                      # Check if we are too hot
+select r0 r0 0 CoolantMaxPressure # Max speed or safety value
+sb PurgeValves Setting r0         # Set purge PurgeValves
+
+# Check for night time temperatures
+lb r0 GasSensors Temperature Sum
+slt r0 r0 NightTemperature
+
+# Check for missing input condensation
+lb r1 Analyzers VolumeOfLiquid Sum
+mul r2 r1 5000
+div r2 r2 IntakePipeCapacity
+slt r1 r2 IntakeMaxStress
+
+# Check for emergency lever state
+lb r3 Levers Open Sum # Check for a manual shutdown
+seqz r3 r3            # Invert the lever handle
+
+# Turn on the intake if we need condensation at night and no emergency
+and r0 r0 r1
+and r0 r0 r3
+sb Vents On r0
+sb FlashingLights On r0
+
+# Retrieve sign data
+lb r0 GasSensors Temperature Sum
+lb r1 Tanks Temperature Sum
+lb r2 Tanks VolumeOfLiquid Sum
+lb r3 Tanks Volume Sum
+div r2 r2 r3
+
+# Convert sign data from kelvin to celsius
+sub r0 r0 273.15
+sub r1 r1 273.15
+mul r2 r2 100
+
+# Round the data
+mul r0 r0 100
+mul r1 r1 100
+mul r2 r2 100
+round r0 r0
+round r1 r1
+round r2 r2
+div r0 r0 100
+div r1 r1 100
+div r2 r2 100
+
+# Set string interpolation data
+sbn Signs Sign0 SettingInput r0
+sbn Signs Sign1 SettingInput r1
+sbn Signs Sign2 SettingInput r2
+
+# Convert sign data from rounded celsius back to kelvin
+add r0 r0 273
+add r1 r1 273
+
+# Set string interpolation to own slot or to no pressure slot if zero
+select r0 r0 0 3
+select r1 r1 1 3
+
+# Map string interpolation to computer slot
+sbn Signs Sign0 Setting r0
+sbn Signs Sign1 Setting r1
+sbn Signs Sign2 Setting 2  # Not dynamic
+
+j start # Repeat program
+# Max line width
+##########################################################################################

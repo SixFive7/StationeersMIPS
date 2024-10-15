@@ -1,0 +1,44 @@
+# Vulcan department subsystem purpose control system
+
+# Variables
+define DeepMinerSpeed 100 # Deep minder speed in %
+
+
+# Device definitions
+define DeepMiners        265720906  # Deep miners
+define ChuteLeftValves   648608238  # Lefthanded digital chute valve
+define ChuteRightValves -1337091041 # Righthanded digital chute valve
+define Proximities       568800213  # Proximity sensors
+define Computers        -405593895  # Retro computers
+
+# Setup
+sb DeepMiners Setting DeepMinerSpeed # Set miner speed
+sb ChuteLeftValves Lock 1            # Lock manual controls
+sb ChuteLeftValves On 1              # Turn on
+sb ChuteRightValves Lock 1           # Lock manual controls
+sb ChuteRightValves On 1             # Turn on
+sb Proximities Setting 7             # Somebody is close
+
+# Run program just once per tick
+start:
+yield
+
+# User proximity device (de)activation
+lb r0 Proximities Activate Sum # If somebody is near
+sb Computers On r0             # Turn all computers on
+
+# Deep miner on demand activation
+lb r1 ChuteLeftValves Quantity Sum  # Detect all valve contents
+lb r2 ChuteRightValves Quantity Sum # Detect all valve contents
+or r0 r1 r2                         # Check for anything in the line
+sleep 1                             # Wait for evanescent detection to fleet
+lb r1 ChuteLeftValves Quantity Sum  # Detect all valve contents
+lb r2 ChuteRightValves Quantity Sum # Detect all valve contents
+or r1 r1 r2                         # Check for anything in the line
+and r0 r0 r1                        # Check for a protracted blockage
+seqz r0 r0                          # Invert the value
+sb DeepMiners On r0                 # Turn on if there is no blockage
+
+j start # Repeat program
+# Max line width
+##########################################################################################

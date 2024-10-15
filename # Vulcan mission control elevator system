@@ -1,0 +1,25 @@
+# Vulcan department subsystem purpose control system
+
+# Variables
+
+# Device definitions
+define Elevators -0827912235 # Cabled elevator level
+define Motion    -1713470563 # Motion sensors
+define Lights    -0444430760 # Small flood lights
+define Computers -0405593895 # Retro computers
+
+# Setup
+sb Elevators ElevatorSpeed 20
+
+# Run program just once per tick
+start:
+yield
+
+# User proximity device (de)activation
+lb r0 Motion Activate Sum # If somebody is near
+sb Lights On r0           # Turn all lights on
+sb Computers On r0        # Turn all computers on
+
+j start # Repeat program
+# Max line width
+##########################################################################################

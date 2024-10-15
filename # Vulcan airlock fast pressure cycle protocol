@@ -1,0 +1,168 @@
+# Vulcan airlock fast pressure cycle protocol
+
+# Variables
+define DoorLeft    HASH("Base Door")
+define VentLeft    HASH("Base Vent")
+define GasLeft     HASH("Base Gas Sensor")
+define MotionLeft  HASH("Base Motion Sensor")
+define DoorRight   HASH("Mining Door")
+define VentRight   HASH("Mining Vent")
+define GasRight    HASH("Mining Gas Sensor")
+define MotionRight HASH("Mining Motion Sensor")
+define VentLock    HASH("Airlock Vent")
+define GasLock     HASH("Airlock Gas Sensor")
+define MotionLock  HASH("Airlock Motion Sensor")
+
+# Device type definitions
+define Doors      337416191  # Blast doors
+define Exits     -793837322  # Composite doors
+define Vents     -785498334  # Large powered vents
+define ExitVents -1129453144 # Small active vents
+define Gas       -1252983604 # Gas sensors
+define Motion    -1713470563 # Motion sensors
+define Analyzers  435685051  # Gas pipe analyzers
+define Readers   -345383640  # Logic readers
+define Consoles   235638270  # Wall consoles
+define Monitors   801677497  # Wall monitors
+
+# Registers
+alias UserTransport r10  # Tracks if we are currently transporting a user
+alias TargetDoor r11     # Tracks the current target side
+alias ExhaustVent r12    # Tracks the current vent to function as exhaust
+alias IntakeVent r13     # Tracks the current vent to function as intake
+alias TargetPressure r14 # Tracks the current gas sensor to take as pressure target
+
+# Setup
+sb Exits Mode 1     # Disable manual mode
+sb Exits Lock 0     # Enable the button
+sb Exits Open 0     # Close all doors
+sb Doors Lock 1     # Lock all doors
+sb Doors Open 0     # Close all doors
+sb Vents Lock 1     # Lock all vent controls
+sb Vents On 0       # Turn all vents off
+sb ExitVents Lock 1 # Lock all vent controls
+sb ExitVents On 0   # Turn all vents off
+sb Analyzers Lock 1 # Lock all analyzer controls
+sb Analyzers On 1   # Turn all analyzers on
+sb Readers On 1     # Turn all logic readers on
+sb Consoles On 0    # Turn all consoles off
+sb Monitors On 0    # Turn all monitors off
+
+DetectUser:                                # Waits for a user to approach
+yield                                      # Wait for game tick
+lbn r0 Motion MotionLeft Activate Average  # Check left side user presence
+bgtz r0 CycleToLeft                        # If present cycle airlock to left
+lbn r1 Motion MotionRight Activate Average # Check right side user presence
+bgtz r1 CycleToRight                       # If present cycle airlock to right
+lbn r2 Motion MotionLock Activate Average  # Check for user inside airlock
+bgtz r2 Cycle                              # If present cycle airlock to invert
+sb Consoles On 0                           # Turn all consoles off
+sb Monitors On 0                           # Turn all monitors off
+j DetectUser                               # Restart detection if nobody around
+
+Cycle:                                     # Setup cycle to invert
+lbn r0 Doors DoorLeft Open Average         # Read if left door is open
+bgtz r0 CycleToRight                       # If open, cycle airlock to right
+j CycleToLeft                              # If else, cycle airlock to left
+
+CycleToLeft:                                    # Setup for cycle to left
+sb Consoles On 1                                # Turn all consoles on
+sb Monitors On 1                                # Turn all monitors on
+lbn r0 Doors DoorLeft Open Average              # Check if already done
+bgtz r0 DetectUser                              # If so, return to user detection
+move ExhaustVent VentRight                      # Right vent is our exhaust
+move IntakeVent VentLeft                        # Left vent is our intake
+move TargetDoor DoorLeft                        # Left door is our target to open
+lbn TargetPressure Gas GasLeft Pressure Average # Left gas pressure is our target
+j Depressurization                              # Start the airlock cycle program
+
+CycleToRight:                                    # Setup for cycle to right
+sb Consoles On 1                                 # Turn all consoles on
+sb Monitors On 1                                 # Turn all monitors on
+lbn r0 Doors DoorRight Open Average              # Check if already done
+bgtz r0 DetectUser                               # If so, return to user detection
+move ExhaustVent VentLeft                        # Left vent is our exhaust
+move IntakeVent VentRight                        # Right vent is our intake
+move TargetDoor DoorRight                        # Right door is our target to open
+lbn TargetPressure Gas GasRight Pressure Average # Right gas pressure is our target
+j Depressurization                               # Start the airlock cycle program
+
+Depressurization:                             # Depressurization start
+sb Doors Open 0                               # Close all the doors
+sb Doors Lock 1                               # Locked doors change colors
+sbn Vents ExhaustVent Mode 0                  # Set the exhaust vent to outward
+sbn Vents VentLock Mode 1                     # Set the airlock vent to inward
+sbn Vents ExhaustVent On 1                    # Turn on the exhaust vent
+sbn Vents VentLock On 1                       # Turn on the airlock vent
+
+WaitForDepressurization:                             # Depressurization end
+yield                                                # Wait for game tick
+sbn Vents ExhaustVent PressureExternal 100000        # Unlimit the exhaust vent (yield bug)
+sbn Vents VentLock PressureExternal 0                # Unlimit the airlock vent (yield bug)
+lbn r0 Gas GasLock Pressure Average                  # Read airlock pressure
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioWater Average                # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidNitrogen Average       # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidOxygen Average         # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidVolatiles Average      # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidCarbonDioxide Average  # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidPollutant Average      # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidNitrousOxide Average   # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioLiquidHydrogen Average       # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lbn r0 Gas GasLock RatioPollutedWater Average        # Read airlock liquid
+bgtz r0 WaitForDepressurization                      # Wait
+lb r0 Analyzers Pressure Average                     # Read pipe pressure
+bgtz r0 WaitForDepressurization                      # Wait
+lb r0 Analyzers VolumeOfLiquid Average               # Read pipe liquid
+bgtz r0 WaitForDepressurization                      # Wait
+sb Vents On 0                                        # Turn all vents off
+lbn UserTransport Motion MotionLock Activate Average # Save if we have a user
+
+Repressurization:                          # Repressurization start
+yield                                      # Fast mode changes bug out
+sbn Vents VentLock Mode 0                  # Set the airlock vent to outward
+sbn Vents IntakeVent Mode 1                # Set the intake vent to inward
+sbn Vents VentLock On 1                    # Turn on the airlock vent
+sbn Vents IntakeVent On 1                  # Turn on the intake vent
+
+WaitForRepressurization:                      # Repressurization end
+yield                                         # Wait for game tick
+sbn Vents VentLock PressureExternal 100000    # Unlimit the airlock vent (yield bug)
+sbn Vents IntakeVent PressureExternal 0       # Unlimit the intake vent (yield bug)
+lbn r0 Gas GasLock Pressure Average           # Read airlock pressure
+blt r0 TargetPressure WaitForRepressurization # Wait until value at target
+sbn Vents VentLock On 0                       # Turn of the airlock vent
+sbn Doors TargetDoor Lock 0                   # Unlocked the target door
+sbn Doors TargetDoor Open 1                   # Open the target door
+
+Flush:                                       # Flush start
+sbn Vents IntakeVent Mode 0                  # Set the intake vent to outward
+
+WaitForFlush:                                     # Flush end
+yield                                             # Wait for game tick
+sbn Vents IntakeVent PressureExternal 100000      # Unlimit the intake vent (yield bug)
+lb r0 Analyzers Pressure Average                  # Read transfer pipe pressure
+bgtz r0 WaitForFlush                              # Wait until value is zero
+lb r0 Analyzers VolumeOfLiquid Average            # Read transfer pipe liquid
+bgtz r0 WaitForFlush                              # Wait until value is zero
+sb Vents On 0                                     # Turn all vents off
+################################# sb Leds Color 0 # Blue
+sb Doors Lock 0                                   # Unlocked doors change colors
+
+DetectUserExit:                           # User exit
+yield                                     # Wait for game tick
+beqz UserTransport DetectUser             # Skip program if nobody
+lbn r0 Motion MotionLock Activate Average # Detect if user is in airlock
+bgtz r0 DetectUserExit                    # Wait until value is zero
+j DetectUser
+
+# Max line width
+##########################################################################################

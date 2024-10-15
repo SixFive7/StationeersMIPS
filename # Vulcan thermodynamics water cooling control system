@@ -1,0 +1,206 @@
+# Vulcan thermodynamics water cooling control system
+
+# Text labels
+# <sprite name=liquid_4><br>{}°
+# <sprite name=gas_1><br>{}°
+# <sprite name=random_12><br>{}°
+# <sprite name=gas_4><br>{}°
+# <sprite name=liquid_4><br>{}°
+# <sprite name=liquid_4><br>{}°
+# <sprite name=gas_4><br>{}°
+# <sprite name=random_12><br>{}°
+# <sprite name=gas_1><br>{}°
+# <sprite name=liquid_7><br>{}°
+# <sprite name=warning_43>
+
+# Variables
+define MaxHotTemperature     10000 # Target cold chamber temperature
+define MinColdTemperature    0     # Target cold chamber temperature
+define SafetyMargin          1     # Target padding to absorb in flight reaction chambers
+define CondensorPressure     6000  # Max power
+define EvaporatorPressure    0     # Max power
+define InterExchangeVolume   1     # Liquid fill % with headroom for uncondesed gas
+define InterExchangePressure 1000  # Gas fill pressure with headroom for unevaporated gas
+define TankExchangePressure  1000  # Pressure of hot and cold heat exchange ports
+define HotTank                       HASH("Pollutants")
+define ColdTank                      HASH("Water")
+define HotExternalGasAnalyzer        HASH("Hot External Gas Pipe Analyzer")
+define ColdExternalGasAnalyzer       HASH("Cold External Gas Pipe Analyzer")
+define HotInternalGasAnalyzer        HASH("Hot Internal Gas Pipe Analyzer")
+define ColdInternalGasAnalyzer       HASH("Cold Internal Gas Pipe Analyzer")
+define HotInternalLiquidAnalyzer     HASH("Hot Internal Liquid Pipe Analyzer")
+define ColdInternalLiquidAnalyzer    HASH("Cold Internal Liquid Pipe Analyzer")
+define Sign0                         HASH("0")
+define Sign1                         HASH("1")
+define Sign2                         HASH("2")
+define Sign3                         HASH("3")
+define Sign4                         HASH("4")
+define Sign5                         HASH("5")
+define Sign6                         HASH("6")
+define Sign7                         HASH("7")
+define Sign8                         HASH("8")
+define Sign9                         HASH("9")
+
+# Device definitions
+define VolumeRegulators     0482248766 # Liquid volume regulators
+define PressureRegulators   0209854039 # Gas pressure regulators
+define Tanks               -1430440215 # Large insulated liguid tanks
+define TanksMirrors         2096189278 # Large insulated liguid tanks logic mirrors
+define Condensors           1420719315 # Condensation chambers
+define PurgeValves         -0737232128 # Purge valves
+define Evaporators         -1429782576 # Evaporator chambers
+define GasPipeAnalyzers     0435685051 # Gas pipe analyzers
+define LiquidPipeAnalyzers -2113838091 # Liquid pipe analyzers
+define Levers               1220484876 # Section emergency breaker
+define Proximities          0568800213 # Proximity sensors
+define Lights              -0444430760 # Small flood lights
+define Computers           -0405593895 # Retro computers
+define Signs                1101240679 # Programmable signs 1x1
+
+# Setup
+sb VolumeRegulators Lock 1                         # Lock manual controls
+sb VolumeRegulators Setting InterExchangeVolume    # Set inter exchange fillup percentage
+sb VolumeRegulators On 1                           # Enable
+sb PressureRegulators Lock 1                       # Lock manual controls
+sb PressureRegulators Setting TankExchangePressure # Set heat exchange pressure
+sb PressureRegulators On 1                         # Enable
+sb LiquidPipeAnalyzers Lock 1                      # Lock manual controls
+sb LiquidPipeAnalyzers On 1                        # Enable
+sb GasPipeAnalyzers Lock 1                         # Lock manual controls
+sb GasPipeAnalyzers On 1                           # Enable
+sb PurgeValves Lock 1                              # Lock manual controls
+sb PurgeValves Setting 4455                        # Set overpressure safety
+sb PurgeValves On 1                                # Enable
+sb Condensors Lock 1                               # Lock manual controls
+sb Condensors Open 0                               # Close the chamber
+sb Condensors Setting CondensorPressure            # Set the pressure
+sb Evaporators Lock 1                              # Lock manual controls
+sb Evaporators Open 0                              # Close the chamber
+sb Evaporators Setting EvaporatorPressure          # Set the pressure
+sb Proximities Setting 10                          # Somebody is close
+sb Signs Mode 4                                    # Variable text mode
+
+# Run program just once per tick
+start:
+yield
+
+# User proximity device (de)activation
+lb r0 Proximities Activate Sum                        # If somebody is near
+sb LiquidPipeAnalyzers On r0                          # Turn all liquid pipe analyzers on
+sbn GasPipeAnalyzers HotExternalGasAnalyzer On r0     # Turn this analyzer on
+sbn GasPipeAnalyzers ColdExternalGasAnalyzer On r0    # Turn this analyzer on
+sbn GasPipeAnalyzers HotInternalGasAnalyzer On r0     # Turn this analyzer on
+sbn GasPipeAnalyzers ColdInternalGasAnalyzer On r0    # Turn this analyzer on
+sbn GasPipeAnalyzers HotInternalLiquidAnalyzer On r0  # Turn this analyzer on
+sbn GasPipeAnalyzers ColdInternalLiquidAnalyzer On r0 # Turn this analyzer on
+sb Lights On r0                                       # Turn all lights on
+sb Computers On r0                                    # Turn all computers on
+sb Signs On r0                                        # Turn all signs on
+
+# Hot side analysis
+add r0 MaxHotTemperature 273.1      # Get target in kelvin
+sub r0 r0 SafetyMargin              # Safety first
+lbn r1 Tanks HotTank Temperature Sum # Get the hot tank temperature
+slt r11 r1 r0                       # Check if we are safe
+
+# Cold side analysis
+add r0 MinColdTemperature 273.1      # Get target in kelvin
+add r0 r0 SafetyMargin               # Safety first
+lbn r1 Tanks ColdTank Temperature Sum # Get the cold tank temperature
+sgt r12 r1 r0                        # Check if we are safe
+
+# Check emergency lever abort
+lb r0 Levers Open Sum # Check emergency lever
+seqz r0 r0            # Invert the lever handle
+and r0 r0 r11         # Check for lever and hot safety
+and r0 r0 r12         # Check for lever and cold safety
+sb Condensors On r0   # Turn on when allowed
+sb Evaporators On r0  # Turn on when allowed
+
+# Retrieve sign data
+lbn r0 TanksMirrors HotTank Temperature Sum
+lbn r1 GasPipeAnalyzers HotExternalGasAnalyzer Temperature Sum
+lb r2 Condensors Temperature Average
+lbn r3 GasPipeAnalyzers HotInternalGasAnalyzer Temperature Sum
+lbn r4 LiquidPipeAnalyzers HotInternalLiquidAnalyzer Temperature Sum
+lbn r5 LiquidPipeAnalyzers ColdInternalLiquidAnalyzer Temperature Sum
+lbn r6 GasPipeAnalyzers ColdInternalGasAnalyzer Temperature Sum
+lb r7 Evaporators Temperature Average
+lbn r8 GasPipeAnalyzers ColdExternalGasAnalyzer Temperature Sum
+lbn r9 Tanks ColdTank Temperature Sum
+
+# Convert sign data from kelvin to celsius
+sub r0 r0 273.15
+sub r1 r1 273.15
+sub r2 r2 273.15
+sub r3 r3 273.15
+sub r4 r4 273.15
+sub r5 r5 273.15
+sub r6 r6 273.15
+sub r7 r7 273.15
+sub r8 r8 273.15
+sub r9 r9 273.15
+
+# Round temperature data
+round r0 r0
+round r1 r1
+round r2 r2
+round r3 r3
+round r4 r4
+round r5 r5
+round r6 r6
+round r7 r7
+round r8 r8
+round r9 r9
+
+# Set string interpolation data
+sbn Signs Sign0 SettingInput r0
+sbn Signs Sign1 SettingInput r1
+sbn Signs Sign2 SettingInput r2
+sbn Signs Sign3 SettingInput r3
+sbn Signs Sign4 SettingInput r4
+sbn Signs Sign5 SettingInput r5
+sbn Signs Sign6 SettingInput r6
+sbn Signs Sign7 SettingInput r7
+sbn Signs Sign8 SettingInput r8
+sbn Signs Sign9 SettingInput r9
+
+# Convert sign data from rounded celsius back to kelvin
+add r0 r0 273
+add r1 r1 273
+add r2 r2 273
+add r3 r3 273
+add r4 r4 273
+add r5 r5 273
+add r6 r6 273
+add r7 r7 273
+add r8 r8 273
+add r9 r9 273
+
+# Set string interpolation to own slot or to no pressure slot if zero
+select r0 r0 0 10
+select r1 r1 1 10
+select r2 r2 2 10
+select r3 r3 3 10
+select r4 r4 4 10
+select r5 r5 5 10
+select r6 r6 6 10
+select r7 r7 7 10
+select r8 r8 8 10
+select r9 r9 9 10
+
+# Map string interpolation to computer slot
+sbn Signs Sign0 Setting r0
+sbn Signs Sign1 Setting r1
+sbn Signs Sign2 Setting r2
+sbn Signs Sign3 Setting r3
+sbn Signs Sign4 Setting r4
+sbn Signs Sign5 Setting r5
+sbn Signs Sign6 Setting r6
+sbn Signs Sign7 Setting r7
+sbn Signs Sign8 Setting r8
+sbn Signs Sign9 Setting r9
+
+j start # Repeat program
+# Max line width
+##########################################################################################

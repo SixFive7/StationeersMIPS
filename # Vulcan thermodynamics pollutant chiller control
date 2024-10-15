@@ -1,0 +1,85 @@
+# Vulcan thermodynamics pollutant chiller control system
+
+# Variables
+define MaxFillColdVolume     75    # Liquid fill % with headroom for yet uncondesed gas
+define MaxFillHotGasPressure 10000 # Max gas before fill stop to have condensation room
+define MaxSafeHotGasPressure 48640 # Controls overpressure safety regulator
+define Stage1TargetPressure  4864  # Stage 1 +/- 96 degrees (max liquid pipe stress)
+define Stage2TargetPressure  4458  # Stage 2 +/- 74 degrees
+define Stage3TargetPressure  4053  # Stage 3 +/- 50 degrees
+define Stage4TargetPressure  3647  # Stage 4 +/- 25 degrees
+define Stage5TargetPressure  3242  # Stage 5 +/- 0 degrees
+#define Stage1TargetPressure 4864  # Stage 1+/-  96 degrees (max liquid pipe stress)
+#define Stage2TargetPressure 4098  # Stage 2+/-  53 degrees
+#define Stage3TargetPressure 3332  # Stage 3+/-   5 degrees
+#define Stage4TargetPressure 2566  # Stage 4+/- -45 degrees
+#define Stage5TargetPressure 1800  # Stage 5+/- -98 degrees (min before solidification)
+
+# Device definitions
+define PressureRegulators  -1149857558 # Gas backpressure regulators
+define VolumeRegulators     482248766  # Liquid volume regulators
+define PurgeValves         -737232128  # Purge valves
+define Stage1PurgeValve            HASH("Stage 1 Purge Valve")
+define Stage2PurgeValve            HASH("Stage 2 Purge Valve")
+define Stage3PurgeValve            HASH("Stage 3 Purge Valve")
+define Stage4PurgeValve            HASH("Stage 4 Purge Valve")
+define Stage5PurgeValve            HASH("Stage 5 Purge Valve")
+define LiquidPipeAnalyzers  435685051  # Gas pipe analyzers
+define GasPipeAnalyzers    -2113838091 # Liquid pipe analyzers
+define Tanks               -1430440215 # Large insulated liguid tanks
+define HotTank                     HASH("Hot Pollutant Buffer Tank")
+define ColdTank                    HASH("Cold Pollutant Buffer Tank")
+define Sliders              576516101  # Diode sliders
+define Proximities          568800213  # Proximity sensors
+define Consoles             235638270  # Wall consoles
+define Monitors             801677497  # Wall monitors
+define Computers           -405593895  # Retro computers
+
+# Setup
+sb VolumeRegulators Lock 1                                    # Lock manual controls
+sb VolumeRegulators Setting MaxFillColdVolume                 # Set fillup percentage
+sb VolumeRegulators On 0                                      # Disable
+sb PressureRegulators Lock 1                                  # Lock manual controls
+sb PressureRegulators Setting MaxSafeHotGasPressure           # Set overpressure safety
+sb PressureRegulators On 1                                    # Enable
+sb PurgeValves Lock 1                                         # Lock manual controls
+sbn PurgeValves Stage1PurgeValve Setting Stage1TargetPressure # Stage 1 pressure control
+sbn PurgeValves Stage2PurgeValve Setting Stage2TargetPressure # Stage 2 pressure control
+sbn PurgeValves Stage3PurgeValve Setting Stage3TargetPressure # Stage 3 pressure control
+sbn PurgeValves Stage4PurgeValve Setting Stage4TargetPressure # Stage 4 pressure control
+sbn PurgeValves Stage5PurgeValve Setting Stage5TargetPressure # Stage 5 pressure control
+sb PurgeValves On 1                                           # Enable
+sb LiquidPipeAnalyzers Lock 1                                 # Lock manual controls
+sb LiquidPipeAnalyzers On 1                                   # Enable
+sb GasPipeAnalyzers Lock 1                                    # Lock manual controls
+sb GasPipeAnalyzers On 1                                      # Enable
+sb Proximities Setting 5                                      # Somebody is close
+sb Sliders Lock 1                                             # Lock manual controls
+
+# Run program just once per tick
+start:
+yield
+
+# User proximity device (de)activation
+lb r0 Proximities Activate Sum   # If somebody is near
+sb LiquidPipeAnalyzers On r0     # Turn all liquid pipe analyzers on
+sb GasPipeAnalyzers On r0        # Turn all gas pipe analyzers on
+sb Sliders On r0                 # Turn all sliders on
+sb Consoles On r0                # Turn all consoles on
+sb Monitors On r0                # Turn all monitors on
+sb Computers On r0               # Turn all computers on
+
+# Initial tank fill logic
+lbn r0 Tanks HotTank Pressure Sum        # Read hot tank pressure
+slt r0 r0 MaxFillHotGasPressure          # Check gas side if we may fill up
+sb VolumeRegulators On r0                # Enable to % if hot side agrees
+
+
+# Write to graph console memory memory banks
+lbn r0 Tanks ColdTank VolumeOfLiquid Sum # Read the current volume
+div r0 r0 50000                          # Devide by the tank storage
+sb Sliders Setting r0                    # Write the percentage to the slider
+
+j start # Repeat program
+# Max line width
+##########################################################################################
