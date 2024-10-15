@@ -9,11 +9,16 @@ define mHash HASH("mHash")
 define mCount HASH("mCount")
 define mMin HASH("mMin")
 define mSlotMin HASH("mSlotMin")
+define mVendMin HASH("mVendMin")
 define mMax HASH("mMax")
 define mSlotMax HASH("mSlotMax")
+define mVendMax HASH("mVendMax")
+define mClass HASH("mClass")
+define mRequestHash HASH("mRequestHash")
 
 define LARRE_CARGO_T -1555459562
 define LarRECounter HASH("LarRECounter")
+define DROP_STATION 4
 define PICKUP_STATION 3
 define BASE_STATION 2
 
@@ -23,9 +28,12 @@ define MIN_SLOT_INDEX 2
 define MAX_SLOT_INDEX 101
 
 define PLASTIC_SHEET_T 662053345
+define ORE_LEAD_T -190236170
 
 sb STACKER_T Mode 1 
 
+alias minVend r4
+alias maxVend r5
 alias maxSlot r6
 alias maxQuantity r7
 alias minSlot r8
@@ -37,6 +45,9 @@ alias vendingMachine r13
 alias itemHash r14
 alias targetStation r15
 
+sbn MEMORY_T mRequestHash Setting -1
+jal clearCount
+
 loop:
 yield
 
@@ -47,16 +58,53 @@ lbns r0 CHUTE_EXPORT_BIN_T NextItemBin 0 Occupied Maximum
 bnezal r0 importItem
 move sp 0 # Clear stack in case we don't jump
 
-push PLASTIC_SHEET_T
-jal countItem
+lbn r0 MEMORY_T mRequestHash Setting Maximum
+push r0
+bgtzal r0 exportItem
+move sp 0  # Clear stack in case we don't jump
+sbn MEMORY_T mRequestHash Setting -1
+#push PLASTIC_SHEET_T
+#push ORE_LEAD_T
+#jal countItem
 
 j loop
+
+##############
+exportItem:
+##############
+pop itemHash
+push ra
+
+push itemHash
+jal countItem
+
+lbn count MEMORY_T mCount Setting Maximum
+blez count notFound
+
+lbn r0 MEMORY_T mVendMax Setting Maximum
+sbn VENDING_MACHINE_T r0 RequestHash itemHash
+sbn VENDING_MACHINE_T Vend0 Activate 1
+
+# TODO: select right vending machine station
+push 0 # select station 0 for no
+jal moveAndWait
+jal activate
+push DROP_STATION
+jal moveAndWait
+jal activate
+push BASE_STATION
+jal moveAndWait
+
+notFound:
+pop ra
+j ra
 
 ##############
 countItem:
 ##############
 pop itemHash
 push ra
+
 move count 0
 move minSlot 9999
 move minQuantity 9999
@@ -75,18 +123,22 @@ move index MIN_SLOT_INDEX
 ci1:
 lbns r0 VENDING_MACHINE_T vendingMachine index OccupantHash Maximum
 lbns r1 VENDING_MACHINE_T vendingMachine index Quantity Maximum
+lbns r2 VENDING_MACHINE_T vendingMachine index Class Maximum
 seq r0 r0 itemHash
 mul r0 r0 r1 
 add count count r0
 
 beqz r0 ci3
+    sbn MEMORY_T mClass Setting r2
     bge r1 minQuantity ci2
         move minSlot index
         move minQuantity r1    
+        move minVend vendingMachine
 ci2:
     blt r1 maxQuantity ci3
         move maxSlot index
         move maxQuantity r1
+        move maxVend vendingMachine
 ci3:
 
 add index index 1
@@ -97,8 +149,10 @@ sbn MEMORY_T mHash Setting itemHash
 sbn MEMORY_T mCount Setting count
 sbn MEMORY_T mMin Setting minQuantity
 sbn MEMORY_T mSlotMin Setting minSlot
-sbn MEMORY_T mSlotMax Setting maxSlot
+sbn MEMORY_T mVendMin Setting minVend
 sbn MEMORY_T mMax Setting maxQuantity
+sbn MEMORY_T mSlotMax Setting maxSlot
+sbn MEMORY_T mVendMax Setting maxVend
 
 pop ra
 j ra
@@ -166,4 +220,21 @@ pushAllVendingMachines:
 ##############
 push Vend0
 # vend 2.. vend 3.. vend 4
+j ra
+
+
+##############
+clearCount:
+##############
+sbn MEMORY_T mHash Setting -1
+sbn MEMORY_T mCount Setting -1
+sbn MEMORY_T mMin Setting -1
+sbn MEMORY_T mSlotMin Setting -1
+sbn MEMORY_T mVendMin Setting -1
+sbn MEMORY_T mMax Setting -1
+sbn MEMORY_T mSlotMax Setting -1
+sbn MEMORY_T mVendMax Setting -1
+sbn MEMORY_T mClass Setting -1 # https://stationeers-wiki.com/Logic_Sorter#Item_Slot_Classes_.2F_Types
+
+
 j ra
