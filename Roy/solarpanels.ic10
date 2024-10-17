@@ -8,6 +8,8 @@ define COMPUTER_T -405593895
 
 define SOLAR_PANEL_T -934345724
 define DAYLIGHT_SENSOR_T 1076425094
+define STATION_BATTERY_T -400115994
+define TRANSFORMER_T -1423212473
 
 alias horizontal r15
 alias vertical r14
@@ -22,7 +24,19 @@ add r0 360 horizontal
 sb SOLAR_PANEL_T Horizontal r0
 
 sub r0 90 vertical
-sb SOLAR_PANEL_T Vertical r0 # TODO
+sb SOLAR_PANEL_T Vertical r0
+
+# Enable transfomer only if battery 
+# can sustain the chip through the night
+lb r0 STATION_BATTERY_T Ratio Maximum
+lb r1 TRANSFORMER_T On Maximum
+
+sgt r2 r0 0.2 # above deactivation treshold
+sge r3 r0 0.3 # above activation treshold
+max r0 r1 r3 # (current value or >activate)
+
+min r0 r0 r2 # (value or activate) AND >deactivate
+sb TRANSFORMER_T On r0
 
 # <Power saving script>
 lb r0 PROXIMITY_SENSOR_T Activate Sum

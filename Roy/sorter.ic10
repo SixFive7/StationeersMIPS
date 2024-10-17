@@ -62,7 +62,7 @@ lbn r0 MEMORY_T mRequestHash Setting Maximum
 push r0
 bgtzal r0 exportItem
 move sp 0  # Clear stack in case we don't jump
-sbn MEMORY_T mRequestHash Setting -1
+sbn MEMORY_T mRequestHash Setting -1w
 #push PLASTIC_SHEET_T
 #push ORE_LEAD_T
 #jal countItem
