@@ -1,0 +1,66 @@
+define PIPE_HEATER -419758574
+define PIPE_ANALYZER 435685051
+define DIGITAL_VALVE -1280984102
+
+define MIN_PRESSURE 100
+
+alias desiredTemp r12
+alias valve r13
+alias analyzer r14
+alias heater r15
+
+alias temperature r0
+alias pressure r1
+alias tempOk r2
+alias tempBad r3
+alias pressureOk r4
+alias export r5
+alias heat r6
+
+reset:
+# O3
+push HASH("O3Heater")
+push HASH("O3Analyzer")
+push HASH("O3Valve")
+push 305
+
+# O2
+push HASH("O2Heater")
+push HASH("O2Analyzer")
+push HASH("O2Valve")
+push 164
+
+# CH4
+push HASH("CH4Heater")
+push HASH("CH4Analyzer")
+push HASH("CH4Valve")
+push 196
+
+# CO2
+push HASH("CO2Heater")
+push HASH("CO2Analyzer")
+push HASH("CO2Valve")
+push 268
+
+loop:
+
+# Reset on empty stack
+blez sp reset
+
+pop desiredTemp 
+pop valve
+pop analyzer
+pop heater
+
+lbn temperature PIPE_ANALYZER analyzer Temperature Maximum
+lbn pressure PIPE_ANALYZER analyzer Pressure Maximum
+slt tempBad temperature desiredTemp 
+sge tempOk temperature desiredTemp
+sge pressureOk pressure MIN_PRESSURE 
+and heat pressureOk tempBad
+and export pressureOk tempOk
+sbn PIPE_HEATER heater On heat
+sbn DIGITAL_VALVE valve On export
+yield
+
+j loop

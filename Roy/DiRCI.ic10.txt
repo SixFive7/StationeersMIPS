@@ -1,0 +1,59 @@
+define M_IDLE 0
+define M_MOVE_TO_TARGET 1
+define M_LOAD_CARGO 2
+define M_UNLOAD_CARGO 3
+define M_CARGO_FULL 4
+define M_CARGO_EMPTY 5
+define M_PATH_FROM_STACK 6
+define M_STACK_POINT_ARRIVED 7
+
+start:
+put db 64 0.75 # set speed 0.2-6.0
+
+s db TargetX -1274.5
+s db TargetY 203
+s db TargetZ -676
+s db Mode M_MOVE_TO_TARGET
+
+go_face:
+yield
+l r0 db Mode
+beqz r0 facing
+j go_face
+facing:
+
+yield
+s db TargetX -1275
+s db TargetY 203
+s db TargetZ -678
+s db Mode M_MOVE_TO_TARGET
+
+go_load:
+yield
+l r0 db Mode
+beqz r0 load
+j go_load
+load:
+
+# s db Mode M_IDLE
+yield
+s db Mode M_LOAD_CARGO
+sleep 2
+
+s db TargetX -1281.75
+s db TargetY 203
+s db TargetZ -677.75
+s db Mode M_MOVE_TO_TARGET
+
+go_drop:
+yield
+l r0 db Mode
+beqz r0 drop
+j go_drop:
+drop:
+
+yield
+s db Mode M_UNLOAD_CARGO
+sleep 2
+
+j start

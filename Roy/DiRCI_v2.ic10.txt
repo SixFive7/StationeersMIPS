@@ -1,0 +1,164 @@
+define M_IDLE 0
+define M_MOVE_TO_TARGET 1
+define M_LOAD_CARGO 2
+define M_UNLOAD_CARGO 3
+define M_CARGO_FULL 4
+define M_CARGO_EMPTY 5
+define M_PATH_FROM_STACK 6
+define M_STACK_POINT_ARRIVED 7
+
+define WAYPOINTS 9
+define SLOW 0.75
+define FAST 5.99
+define MAX_WAIT 4 # ~2 seconds
+alias tos r15
+alias counter r14
+
+start:
+put db 64 FAST # set speed 0.2-6.0
+
+### Outpost Coordinates ###
+# Entry
+push -1193
+push 195
+push -658.75
+push M_IDLE
+push SLOW
+# Deposit
+push -1187.5
+push 197
+push -658.75
+push M_UNLOAD_CARGO 
+push SLOW
+# Pickup
+push -1183
+push 197
+push -658.75
+push M_LOAD_CARGO
+push SLOW
+# Exit1
+push -1183
+push 197
+push -657.25
+push M_IDLE
+push SLOW
+# Exit2
+push -1193
+push 195
+push -657.25
+push M_IDLE
+push FAST
+
+### Base Coordinates ###
+# Entry
+push -1243
+push 200
+push -699
+push M_IDLE
+push SLOW
+# Delivery
+push -1249.5
+push 200
+push -699
+push M_UNLOAD_CARGO
+push SLOW
+# Pickup
+push -1249
+push 200
+push -703
+push M_LOAD_CARGO
+push SLOW
+# Exit
+push -1243
+push 200
+push -703
+push M_IDLE
+push FAST
+
+move sp 1
+mul tos WAYPOINTS 5
+
+loop:
+jal SetNextCoordinate
+jal WaitForIdle
+jal SetNextMode
+jal WaitForIdle
+jal SetSpeed
+ble sp tos loop
+
+j start
+
+SetSpeed:
+peek r0
+put db 64 r0 # set speed 0.2-6.0
+add sp sp 1
+j ra
+
+SetNextCoordinate:
+peek r0
+s db TargetX r0
+add sp sp 1
+
+peek r0
+s db TargetY r0
+add sp sp 1
+
+peek r0
+s db TargetZ r0
+add sp sp 1
+
+s db Mode M_MOVE_TO_TARGET
+yield
+j ra
+
+SetNextMode:
+peek r0
+s db Mode r0
+add sp sp 1
+yield
+j ra
+
+WaitForIdle:
+l r0 db Mode
+# Load and unload cargo have special idle states
+beq r0 M_LOAD_CARGO WaitForFullOrTime
+beq r0 M_UNLOAD_CARGO WaitForEmptyOrTime
+yield
+l r0 db Mode
+bne r0 M_IDLE WaitForIdle
+yield
+j ra
+
+WaitForFullOrTime:
+move counter 0
+_WaitForFullOrTime:
+yield
+add counter counter 1
+l r0 db Mode
+seq r1 r0 M_CARGO_FULL
+seq r2 r0 M_IDLE 
+sgt r3 counter MAX_WAIT
+or r0 r1 r2
+or r0 r0 r3
+beqz r0 _WaitForFullOrTime 
+yield
+s db Mode M_IDLE 
+yield
+j ra
+
+WaitForEmptyOrTime:
+move counter 0
+_WaitForEmptyOrTime:
+yield
+add counter counter 1
+l r0 db Mode
+seq r1 r0 M_CARGO_EMPTY
+seq r2 r0 M_IDLE  
+sgt r3 counter MAX_WAIT
+or r0 r1 r2
+or r0 r0 r3
+beqz r0 _WaitForEmptyOrTime
+yield
+s db Mode M_IDLE 
+yield
+j ra

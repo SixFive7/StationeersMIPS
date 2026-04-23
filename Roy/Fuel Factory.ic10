@@ -1,0 +1,45 @@
+define MAX_PRESSURE 30000 # in kPa
+define CRUSHER_T 443849486
+define PA_T 435685051
+define MIXER_T 2104106366
+
+define VOLATILES_CRUSHER HASH("Volatiles Crusher")
+define VOLATILES_PA HASH("PA Methane")
+
+define OXITE_CRUSHER HASH("Oxite Crusher")
+define OXITE_PA HASH("PA Oxygen")
+
+define NITRICE_CRUSHER HASH("Nitrice Crusher")
+define NITRICE_PA HASH("PA Coolant")
+
+define FUEL_MIXER HASH("Gas Mixer")
+define FUEL_PA HASH("PA Fuel")
+
+alias pressure r0
+alias enable r1
+
+loop:
+# Enable crushers if gas tanks can take it
+lbn pressure PA_T VOLATILES_PA Pressure Maximum
+slt enable r0 MAX_PRESSURE
+sbn CRUSHER_T VOLATILES_CRUSHER On enable
+yield
+
+lbn pressure PA_T OXITE_PA Pressure Maximum
+slt enable r0 MAX_PRESSURE
+sbn CRUSHER_T OXITE_CRUSHER On enable
+yield
+
+lbn pressure PA_T NITRICE_PA Pressure Maximum
+slt enable r0 MAX_PRESSURE
+sbn CRUSHER_T NITRICE_CRUSHER On enable
+yield
+
+# Enable mixer if the gas tank can take it
+lbn pressure PA_T FUEL_PA Pressure Maximum
+slt enable r0 MAX_PRESSURE
+sbn MIXER_T FUEL_MIXER On enable
+yield
+
+j loop
+

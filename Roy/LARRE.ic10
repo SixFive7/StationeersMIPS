@@ -1,0 +1,74 @@
+define GAS_MIXER 1310794736
+define PIPE_ANALYZER 435685051
+define CANISTER_STORAGE 1632165346
+define CHUTE_EXPORT_BIN 1957571043
+define CARGO_DOCK -1555459562
+
+define FUEL_MIXER HASH("Fuel Mixer")
+define FUEL_ANALYZER HASH("Fuel Analyzer")
+define TANK_FILLER HASH("Tank Filler")
+define START HASH("Start")
+define DOCK HASH("Dock")
+
+define MAX_PRESSURE 50000
+define CANISTER_FULL_PRESSURE 19999
+
+start:
+yield
+
+### Create the fuel ###
+sbn PIPE_ANALYZER FUEL_ANALYZER  On 1
+lbn r0 PIPE_ANALYZER FUEL_ANALYZER Pressure Maximum
+s db Setting r0
+
+slt r0 r0 MAX_PRESSURE 
+sbn GAS_MIXER FUEL_MIXER On r0
+
+### TODO: Put into another chip otherwise tank will explode while doing all the waiting
+
+### Fill a canister ###
+# Reset
+sbn CARGO_DOCK DOCK Setting 0
+jal WaitForIdle
+
+
+# Start the sequence if the chute has an item
+lbns r0 CHUTE_EXPORT_BIN START 0 Occupied Maximum
+beqz r0 start 
+
+# Get the canister from the chute
+sbn CARGO_DOCK DOCK Setting 1
+jal WaitForIdle
+sbn CARGO_DOCK DOCK Activate 1
+jal WaitForIdle
+
+# Place the canister in the canister storage...
+sbn CARGO_DOCK DOCK Setting 3
+jal WaitForIdle
+sbn CARGO_DOCK DOCK Activate 1
+jal WaitForIdle
+# ...and wait until it is full
+jal WaitForFull
+
+# Pick up the canister and put it in the vending machine
+sbn CARGO_DOCK DOCK Activate 1
+jal WaitForIdle
+sbn CARGO_DOCK DOCK Setting 2
+jal WaitForIdle
+sbn CARGO_DOCK DOCK Activate 1
+
+j start
+
+WaitForIdle:
+yield
+lbn r0 CARGO_DOCK DOCK Idle Maximum
+beqz r0 WaitForIdle
+yield
+j ra
+
+WaitForFull:
+yield
+lbn r0 CANISTER_STORAGE TANK_FILLER Pressure Maximum
+blt r0 CANISTER_FULL_PRESSURE WaitForFull
+yield
+j ra
