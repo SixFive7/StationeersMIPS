@@ -112,6 +112,7 @@ yield
 j ra
 
 SetNextMode:
+yield
 peek r0
 s db Mode r0
 add sp sp 1
@@ -120,45 +121,25 @@ j ra
 
 WaitForIdle:
 l r0 db Mode
-# Load and unload cargo have special idle states
-beq r0 M_LOAD_CARGO WaitForFullOrTime
-beq r0 M_UNLOAD_CARGO WaitForEmptyOrTime
+# Ensure that we don't wait forever on loading/unloading cargo
+beq r0 M_LOAD_CARGO WaitForIdleOrTime
+beq r0 M_UNLOAD_CARGO WaitForIdleOrTime
 yield
 l r0 db Mode
-bne r0 M_IDLE WaitForIdle
-yield
-j ra
+# Load and unload cargo might immediately go to special idle states
+beq r0 M_CARGO_EMPTY ra
+beq r0 M_CARGO_FULL ra
+beq r0 M_IDLE ra
+j WaitForIdle
 
-WaitForFullOrTime:
+WaitForIdleOrTime:
 move counter 0
-_WaitForFullOrTime:
+_WaitForIdleOrTime:
 yield
 add counter counter 1
 l r0 db Mode
-seq r1 r0 M_CARGO_FULL
-seq r2 r0 M_IDLE 
-sgt r3 counter MAX_WAIT
-or r0 r1 r2
-or r0 r0 r3
-beqz r0 _WaitForFullOrTime 
-yield
-s db Mode M_IDLE 
-yield
-j ra
-
-WaitForEmptyOrTime:
-move counter 0
-_WaitForEmptyOrTime:
-yield
-add counter counter 1
-l r0 db Mode
-seq r1 r0 M_CARGO_EMPTY
-seq r2 r0 M_IDLE  
-sgt r3 counter MAX_WAIT
-or r0 r1 r2
-or r0 r0 r3
-beqz r0 _WaitForEmptyOrTime
-yield
-s db Mode M_IDLE 
-yield
-j ra
+beq r0 M_CARGO_EMPTY ra
+beq r0 M_CARGO_FULL ra
+beq r0 M_IDLE ra
+bgt counter MAX_WAIT ra
+j _WaitForIdleOrTime

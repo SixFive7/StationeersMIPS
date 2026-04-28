@@ -1,0 +1,149 @@
+### FEATURE REQUESTS
+## Lights of BLAST_DOORS RED when in use
+## Warning lights
+
+define BLAST_DOOR 337416191
+define GAS_SENSOR -1252983604
+define MOTION_SENSOR -1713470563
+define PROXIMITY_SENSOR 568800213
+define PIPE_ANALYZER 435685051
+define LARGE_POWERED_VENT -785498334
+define CONSOLE_3X3 671052137
+
+define OUTWARD 0
+define INWARD 1
+
+define A HASH("A")
+define B HASH("B")
+define M HASH("M")
+
+alias param r13
+alias entry r14
+alias exit r15
+
+# Reset to both doors closed
+# with A as entry and B as exit
+sb BLAST_DOOR Open 0
+yield
+
+start:
+jal doorbell
+sb BLAST_DOOR Lock 1
+sbn BLAST_DOOR entry Open 0
+jal vacuum
+jal pressurize
+sbn BLAST_DOOR exit Open 1
+push exit
+sb BLAST_DOOR Lock 0
+jal exhume
+jal reset
+j start
+
+# Detect if the airlock should cycle
+doorbell:
+# Console power saving
+lbn r0 PROXIMITY_SENSOR A Activate Maximum
+lbn r1 PROXIMITY_SENSOR B Activate Maximum
+or r0 r0 r1
+sbn CONSOLE_3X3 M On r0
+yield
+
+_doorbell_in_airlock_waiting_at_a:
+lbn r0 BLAST_DOOR A Open Maximum
+lbn r1 MOTION_SENSOR M Activate Maximum
+seq r0 r0 0 # door closed
+and r0 r0 r1
+beqz r0 _doorbell_in_airlock_waiting_at_b # skip if false
+move entry B
+move exit A
+j ra
+
+_doorbell_in_airlock_waiting_at_b:
+lbn r0 BLAST_DOOR B Open Maximum
+lbn r1 MOTION_SENSOR M Activate Maximum
+seq r0 r0 0 # door closed
+and r0 r0 r1
+beqz r0 _doorbell_waiting_at_a # skip if false
+move entry A
+move exit B
+j ra
+
+_doorbell_waiting_at_a:
+lbn r0 BLAST_DOOR A Open Maximum
+lbn r1 MOTION_SENSOR A Activate Maximum
+seq r0 r0 0 # door closed
+and r0 r0 r1
+beqz r0 _doorbell_waiting_at_b # skip if false
+move entry B
+move exit A
+j ra
+
+_doorbell_waiting_at_b:
+lbn r0 BLAST_DOOR B Open Maximum
+lbn r1 MOTION_SENSOR B Activate Maximum
+seq r0 r0 0 # door closed
+and r0 r0 r1
+beqz r0 _doorbell_idle  # skip if false
+move entry A
+move exit B
+j ra
+
+_doorbell_idle:
+j doorbell
+
+# Vacuum airlock into direction of _entry_
+vacuum:
+sbn LARGE_POWERED_VENT M Mode INWARD
+sbn LARGE_POWERED_VENT M On 1
+sbn LARGE_POWERED_VENT entry Mode OUTWARD
+sbn LARGE_POWERED_VENT entry On 1
+_vacuum:
+yield
+lbn r0 GAS_SENSOR M Pressure Maximum
+bgtz r0 _vacuum
+# Keep both vents on, M for pressurization, entry for exhuming
+push entry
+j exhume # always exhume after vacuum, exhume returns to method that called pressurize
+
+# Pressurize airlock with gasses from _exit_
+pressurize:
+sbn LARGE_POWERED_VENT M Mode OUTWARD
+sbn LARGE_POWERED_VENT M On 1
+sbn LARGE_POWERED_VENT exit Mode INWARD 
+sbn LARGE_POWERED_VENT exit On 1
+_pressurize:
+yield
+lbn r0 GAS_SENSOR M Pressure Maximum
+lbn r1 GAS_SENSOR exit Pressure Maximum
+blt r0 r1 _pressurize
+# Keep LARGE_POWERED_VENT exit on, for exhume
+sbn LARGE_POWERED_VENT M On 0
+j ra
+
+# Empty internal tanks in the direction of the parameter on top of the stack
+exhume:
+pop param
+sbn LARGE_POWERED_VENT param Mode OUTWARD 
+sbn LARGE_POWERED_VENT param On 1
+yield
+sbn LARGE_POWERED_VENT param PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
+_exhume:
+yield
+lbn r0 PIPE_ANALYZER M Pressure Maximum
+bgtz r0 _exhume
+sbn LARGE_POWERED_VENT param On 0
+j ra
+
+# Wait for the player to exit the airlock or till timer runs out
+# before the airlock functions again
+reset:
+move r0 0
+_reset:
+yield
+add r0 r0 1
+sge r1 r0 8 # four seconds
+lbn r2 MOTION_SENSOR M Activate Maximum
+seq r2 r2 0 # not active
+or r3 r1 r2
+beqz r3 _reset
+j ra
