@@ -28,6 +28,14 @@ for i = 1, historyLength do
     pressureBHistory[i] = 0
 end
 
+local a_label = ui:element({
+    id = "a_label",
+    type = "label",
+    rect = { unit = "px", x = margin + columnWidth * 2, y = 0, w = columnWidth - margin, h = rowHeight },
+    props = { text = "Side A" },
+    style = { font_size = 18, color = "#22C55E" }
+})
+
 local a_status = ui:element({
     id = "a",
     type = "label",
@@ -42,6 +50,14 @@ local a_spark = ui:element({ id = "a_spark", type = "sparkline",
     style = { bg = "#111827", line_color = "#22C55E", fill_color = "#22C55E20" },
 })
 
+local m_label = ui:element({
+    id = "m_label",
+    type = "label",
+    rect = { unit = "px", x = margin + columnWidth * 1, y = 0, w = columnWidth - margin, h = rowHeight },
+    props = { text = "Airlock"  },
+    style = { font_size = 18, color = "#22C55E" }
+})
+
 local m_status = ui:element({
     id = "airlock",
     type = "label",
@@ -54,6 +70,14 @@ local m_spark = ui:element({ id = "m_spark", type = "sparkline",
     rect = { unit = "px", x = margin + columnWidth * 1, y = margin + rowHeight, w = columnWidth - margin, h = rowHeight },
     props = { data = pressureMHistory, min = 0, max = 200 },
     style = { bg = "#111827", line_color = "#22C55E", fill_color = "#22C55E20" },
+})
+
+local b_label = ui:element({
+    id = "b_label",
+    type = "label",
+    rect = { unit = "px", x = margin, y = 0, w = columnWidth - margin, h = rowHeight },
+    props = { text = "Side B"  },
+    style = { font_size = 18, color = "#22C55E" }
 })
 
 local b_status = ui:element({
