@@ -180,6 +180,7 @@ function tick(dt)
         primaryLabel:set_props({ text = g.name })
         primaryPct:set_props({ text = string.format("%.1f%% of mix", primaryFrac * 100) })
     else
+        --primaryIcon:set_props({ name = ss.ui.icons.slot.None })
         primaryLabel:set_props({ text = "Empty" })
         primaryPct:set_props({ text = "" })
     end
