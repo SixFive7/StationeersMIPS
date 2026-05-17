@@ -138,7 +138,7 @@ _reset:
 yield
 add r0 r0 1
 sge r1 r0 8 # four seconds
-lbn r2 MOTION_SENSOR M Activate Maximum
+lbn r2 MOTION_SENSOR M Activate Maximum ## TODO: if someone enters before this code runs (because we are still exhuming, or a yield) they have to wait 4 seconds
 seq r2 r2 0 # not active
 or r3 r1 r2
 beqz r3 _reset

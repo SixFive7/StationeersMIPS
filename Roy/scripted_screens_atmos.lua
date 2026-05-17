@@ -1,13 +1,3 @@
--- Airlock code
--- set the following variables to change the labels in the airlock
-
-local AIRLOCK_STATUS = "Airlock Status"
-local AIRLOCK_LABEL = "Airlock"
-local BUFFERS_LABEL = "Buffers"
-local SIDE_B_LABEL = "Atmospherics"
-local SIDE_A_LABEL = "Shaft"
-
---
 local ui = ss.ui.surface("main")
 local LT = ic.enums.LogicType
 local LBM = ic.enums.LogicBatchMethod
@@ -26,25 +16,13 @@ local verticalMargin = 2
 local cellWidth = (wTable / 2) - (horizontalMargin * 2)
 local cellHeight = (hTable / 2) - (verticalMargin * 2)
 
-local icHousingHash = -128473777
-local blastDoorHash = 337416191
-local gasSensorHash = -1252983604
 local pipeAnalyzerHash = 435685051
-local aHash = hash("A")
-local bHash = hash("B")
-local mHash = hash("M")
-local controllerHash = hash("Controller")
+local mixedHash = hash("Mixed")
 local historyLength = 50
-local pressureAHistory = {}
-local pressureMHistory = {}
-local pressureBHistory = {}
-local pressureTHistory = {}
+local pressureHistory = {}
 
 for i = 1, historyLength do
-    pressureAHistory[i] = 0
-    pressureMHistory[i] = 0
-    pressureBHistory[i] = 0
-    pressureTHistory[i] = 0
+    pressureHistory[i] = 0    
 end
 
 -- index is one based
@@ -154,24 +132,8 @@ local function createSpinner(id, column, row)
     return spinner
 end
 
-local title = createTitle("title", AIRLOCK_STATUS)
-local m_label, m_gauge, m_spark = createAirlockCell("m", AIRLOCK_LABEL, pressureAHistory, 1, 1)
-local t_label, t_gauge, t_spark = createAirlockCell("t", BUFFERS_LABEL, pressureTHistory, 2, 1, 1000)
-local b_label, b_gauge, b_spark = createAirlockCell("b", SIDE_B_LABEL, pressureBHistory, 1, 2)
-local a_label, a_gauge, a_spark = createAirlockCell("a", SIDE_A_LABEL, pressureMHistory, 2, 2)
-
-local spinner1 = createSpinner("tl", 1, 1)
-local spinner2 = createSpinner("tr", 2, 1)
-local spinner3 = createSpinner("bl", 1, 2)
-local spinner4 = createSpinner("br", 2, 2)
-
-local debug = ui:element({
-    id = "_debug",
-    type = "label",
-    rect = { unit = "px", x = cellX(1), y = -45, w = W, h = cellHeight },
-    props = { text = "DEBUG" },
-    style = { font_size = 12, color = "#999999" }
-})
+local title = createTitle("title", "Mixed Gasses")
+local m_label, m_gauge, m_spark = createAirlockCell("m", "Dirty", pressureHistory, 1, 1, 50000)
 
 ui:commit()
 
@@ -181,54 +143,10 @@ function tick(dt)
     if accum < 0.5 then return end
     accum = accum - 0.5
     
-    local pressure = 0
-    
-    pressure = ic.batch_read_name(gasSensorHash, aHash, LT.Pressure, LBM.Average)    
-    table.remove(pressureAHistory, 1)    
-    pressureAHistory[#pressureAHistory + 1] = pressure
-    
-    pressure = ic.batch_read_name(gasSensorHash, mHash, LT.Pressure, LBM.Average)
-    table.remove(pressureMHistory, 1)
-    pressureMHistory[#pressureMHistory + 1] = pressure
-    
-    pressure = ic.batch_read_name(gasSensorHash, bHash, LT.Pressure, LBM.Average)
-    table.remove(pressureBHistory, 1)
-    pressureBHistory[#pressureBHistory + 1] = pressure
-
-    pressure = ic.batch_read_name(pipeAnalyzerHash, mHash, LT.Pressure, LBM.Average)
-    table.remove(pressureTHistory, 1)
-    pressureTHistory[#pressureTHistory + 1] = pressure
-
-    b_gauge:set_props({ value = pressureBHistory[#pressureBHistory] })
-    b_spark:set_props({ data = pressureBHistory })
-
-    m_gauge:set_props({ value = pressureMHistory[#pressureMHistory] })
-    m_spark:set_props({ data = pressureMHistory })
-
-    a_gauge:set_props({ value = pressureAHistory[#pressureAHistory] })
-    a_spark:set_props({ data = pressureAHistory })
-
-    t_gauge:set_props({ value = pressureTHistory[#pressureTHistory] })
-    t_spark:set_props({ data = pressureTHistory })
-
-    local openA = ic.batch_read_name(blastDoorHash, aHash, LT.Open, LBM.Average)
-    local openB = ic.batch_read_name(blastDoorHash, bHash, LT.Open, LBM.Average)
-
-    if openA == 0 and openB == 0 then
-        spinner1:set_style({ color = "#ff5151"})
-        spinner2:set_style({ color = "#ff5151"})
-        spinner3:set_style({ color = "#ff5151"})
-        spinner4:set_style({ color = "#ff5151"})
-    else
-        spinner1:set_style({ color = "#65ff51"})
-        spinner2:set_style({ color = "#65ff51"})
-        spinner3:set_style({ color = "#65ff51"})
-        spinner4:set_style({ color = "#65ff51"})
-    end
-    
-    local line = ic.batch_read_name(icHousingHash, controllerHash, LT.LineNumber, LBM.Average)
-    local setting = ic.batch_read_name(icHousingHash, controllerHash, LT.Setting, LBM.Average)
-    debug:set_props({ text = "DEBUG: setting " .. setting .. " at line " .. line })
-
+    local pressure = ic.batch_read_name(pipeAnalyzerHash, mixedHash, LT.Pressure, LBM.Average)    
+    table.remove(pressureHistory, 1)    
+    pressureHistory[#pressureHistory + 1] = pressure
+    m_spark:set_props({ data = pressureHistory })
+   
     ui:commit()
 end
