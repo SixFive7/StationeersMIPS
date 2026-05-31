@@ -1,9 +1,3 @@
-# TODO
-# There are two waits (wait_for_vacuum, wait_for_pressure) these should not
-# yield but instead run a custom yield method to check if someone
-# presses the keypads. Ensure you do not mess up any return addresses (RA)
-# maybe instead of PARAM complex method should just push RA to the stack
-
 define BLAST_DOOR 337416191
 define GAS_SENSOR -1252983604
 define MOTION_SENSOR -1713470563
