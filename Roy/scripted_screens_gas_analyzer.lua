@@ -63,7 +63,7 @@ local iconY = H * 0.20
 ui:element({
     id = "bg", type = "panel",
     rect = { unit = "px", x = 0, y = 0, w = W, h = H },
-    style = { bg = "#0B1120" },
+    style = { bg = "#000000" },
 })
 
 -- Left: stacked gas-mix bar (drawn on a canvas in tick) ----------------
@@ -179,8 +179,8 @@ function tick(dt)
         primaryIcon:set_style({ tint = g.color })
         primaryLabel:set_props({ text = g.name })
         primaryPct:set_props({ text = string.format("%.1f%% of mix", primaryFrac * 100) })
-    else
-        --primaryIcon:set_props({ name = ss.ui.icons.slot.None })
+    else        
+        primaryIcon:set_style({ tint = "#000000" })
         primaryLabel:set_props({ text = "Empty" })
         primaryPct:set_props({ text = "" })
     end

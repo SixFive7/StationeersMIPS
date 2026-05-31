@@ -1,0 +1,218 @@
+define BLAST_DOOR 337416191
+define GAS_SENSOR -1252983604
+define MOTION_SENSOR -1713470563
+define PROXIMITY_SENSOR 568800213
+define PIPE_ANALYZER 435685051
+define LARGE_POWERED_VENT -785498334
+define CONSOLE_3X3 671052137
+define AREA_POWER_CONTROL 1999523701
+define AREA_POWER_CONTROL_REVERSED -1032513487
+define FORCE_FIELD_DOOR 696254815
+define COMPUTER_BIG_SCREEN_WALL_MOUNTED -868055390
+
+# Set when we the force field goes on (early)
+# and when we solely rely on the force field (later)
+# when all doors close because there is no power at all
+define FORCE_FIELD_POWER_OFF_THRESHOLD 0.25
+define AIRLOCK_POWER_OFF_THRESHOLD 0.75
+define EMERGENCY_POWER_THRESHOLD 0.05
+
+define OUTWARD 0
+define INWARD 1
+
+define MODE_FORCEFIELD 2
+define MODE_AIRLOCK 1
+define MODE_EMERGENCY 0
+
+define A HASH("A")          # Everything on the outside of A
+define A_PRIME HASH("A'")   # Everything on the inside of A
+define B HASH("B")          # Everything on the outside of B
+define B_PRIME("B'")        # Everything on the inside of B
+define AIRLOCK HASH("Airlock")
+
+alias mode r10
+alias param r11
+alias entry r12
+alias exit r13
+alias entry_prime r14
+alias exit_prime r15
+
+# Reset
+move mode MODE_EMERGENCY
+sb BLAST_DOOR Open 0
+sb FORCE_FIELD_DOOR On 1
+sb LARGE_POWERED_VENT On 0
+yield
+
+start:
+jal power_save
+jal mode
+jal doorbell
+jal cycle # doorbell has pushed the right arguments
+j start
+
+power_save:
+# Console/computer power saving
+lbn r0 PROXIMITY_SENSOR A Activate Maximum
+lbn r1 PROXIMITY_SENSOR B Activate Maximum
+max r0 r0 r1
+sgtz r0 r0
+sbn CONSOLE_3X3 M On r0
+sbn COMPUTER_BIG_SCREEN_WALL_MOUNTED AIRLOCK On r0
+j ra
+
+mode:
+lb r0 AREA_POWER_CONTROL Ratio Maximum # Main batteries
+ble r0 EMERGENCY_POWER_THRESHOLD _mode_emergency
+
+lb r0 AREA_POWER_CONTROL_REVERSED Ratio Maximum # Force field battery
+ble r0 FORCE_FIELD_POWER_OFF_THRESHOLD _mode_airlock
+_mode_forcefield:
+sbn FORCE_FIELD_DOOR M On 1
+sb BLAST_DOOR Open 1
+move mode MODE_FORCEFIELD
+j start # short circuit main loop
+
+_mode_airlock:
+seq r0 mode MODE_AIRLOCK
+beq r0 1 ra # continue main loop if we are already setup in airlock mode
+move param ra
+jal change_mode_setup
+move mode MODE_AIRLOCK # we are not in airlock mode
+j start # and can continue normal operations
+
+_mode_emergency:
+seq r0 mode MODE_EMERGENCY
+beq r0 1 start # short circuit main loop if we are already setup in emergency mode
+# not that this means we never move forward to the cycling logic so doors stay closed
+move param ra
+jal change_mode_setup
+move mode MODE_EMERGENCY # we are now in emergency mode
+j start # and can continue normal operations
+
+change_mode_setup:
+sb BLAST_DOOR Open 0 # Close airlocks, space is still separate by force fields
+push A_PRIME
+push A
+jal start_pumps # pump out A side
+push B_PRIME
+push B
+jal start_pumps # pump out B side at the same time
+push A_PRIME
+jal wait_for_vacuum # wait until A side is a vacuum
+push B_PRIME
+jal wait_for_vacuum # wait until B side is a vacuum
+jal stop_pumps
+sbn FORCE_FIELD_DOOR M On 0 # disable force field
+jal exhume # empty buffers
+j ra
+
+doorbell:
+yield
+_doorbell_waiting_at_door_a:
+lbn r0 BLAST_DOOR A Open Maximum
+lbn r1 MOTION_SENSOR A_PRIME Activate Maximum
+lbn r2 MOTION_SENSOR A Activate Maximum
+seq r0 r0 0 # door closed
+or r1 r1 r2 # someone near door
+and r0 r0 r1 # door closed AND someone at door
+beqz _doorbell_waiting_at_door_b: # skip if false
+# cycle opening from B side to A side
+push B
+push B_PRIME
+push A_PRIME
+push A
+j ra # continue main loop
+
+_doorbell_waiting_at_door_b:
+lbn r0 BLAST_DOOR B Open Maximum
+lbn r1 MOTION_SENSOR B_PRIME Activate Maximum
+lbn r2 MOTION_SENSOR B Activate Maximum
+seq r0 r0 0 # door closed
+or r1 r1 r2 # someone near door
+and r0 r0 r1 # door closed AND someone at door
+j start: # restart main loop if false
+# cycle opening from B side to A side
+push B
+push B_PRIME
+push A_PRIME
+push A
+j ra # continue main loop
+
+cycle: # push a; push a'; push b'; push b;
+move param ra
+pop exit
+pop exit_prime
+pop entry_prime
+pop entry
+sb BLAST_DOOR Open 0
+
+push entry_prime
+push entry
+jal start_pumps
+
+push entry_prime
+jal wait_for_vacuum
+jal stop_pumps
+
+push exit
+push exit_prime
+jal start_pumps
+
+push exit_prime
+push exit
+jal wait_for_pressure
+jal stop_pumps
+
+sbn BLAST_DOOR exit Open 1
+jal exhume
+j param
+
+start_pumps: # push entry, push exit, pumps entry->exit
+pop exit
+pop entry
+sbn LARGE_POWERED_VENT exit Mode OUTWARD
+sbn LARGE_POWERED_VENT exit On 1
+sbn LARGE_POWERED_VENT entry Mode INWARD
+sbn LARGE_POWERED_VENT entry On 1
+yield
+sbn LARGE_POWERED_VENT exit PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
+j ra
+
+stop_pumps:
+sb LARGE_POWERED_VENT On 0
+j ra
+
+wait_for_vacuum: # push gas sensor
+pop r0
+pop entry
+_wait_for_vacuum:
+yield  # instead of yielding, go to the main loop and request to return here
+lbn r0 GAS_SENSOR r0 Pressure Maximum
+bgtz r0 _wait_for_vacuum
+j ra
+
+wait_for_pressure: # push entry exit to wait for entry to be at least exit pressure
+pop exit
+pop entry
+_wait_for_pressure:
+yield
+lbn r0 GAS_SENSOR entry Pressure Maximum
+lbn r1 GAS_SENSOR exit Pressure Maximum
+blt r0 r1 _wait_for_pressure
+j ra
+
+exhume: # exhumes all gasses in buffers
+sbn LARGE_POWERED_VENT A Mode OUTWARD
+sbn LARGE_POWERED_VENT A On 1
+sbn LARGE_POWERED_VENT B Mode OUTWARD
+sbn LARGE_POWERED_VENT B On 1
+yield
+sbn LARGE_POWERED_VENT A PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
+sbn LARGE_POWERED_VENT B PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
+_exhume:
+yield
+lb r0 PIPE_ANALYZER Pressure Maximum
+bgtz r0 _exhume:
+sb LARGE_POWERED_VENT On 0
+j ra
