@@ -19,7 +19,7 @@ define COMPUTER_BIG_SCREEN_WALL_MOUNTED -868055390
 # The airlock mode depends on the power available
 # for the forcefield and entire airlock
 define FORCEFIELD_POWER_THRESHOLD 0.25
-define EMERGENCY_POWER_THRESHOLD 0.05
+define EMERGENCY_POWER_THRESHOLD 0.10
 
 define OUTWARD 0
 define INWARD 1
@@ -120,7 +120,7 @@ lbn r2 MOTION_SENSOR A Activate Maximum
 seq r0 r0 0 # door closed
 or r1 r1 r2 # someone near door
 and r0 r0 r1 # door closed AND someone at door
-beqz r0 _doorbell_waiting_at_door_b: # skip if false
+beqz r0 _doorbell_waiting_at_door_b # skip if false
 # cycle opening from B side to A side
 push B
 push B_PRIME
@@ -173,14 +173,14 @@ jal exhume
 j param
 
 start_pumps: # push entry, push exit, pumps entry->exit
-pop exit
-pop entry
-sbn LARGE_POWERED_VENT exit Mode OUTWARD
-sbn LARGE_POWERED_VENT exit On 1
-sbn LARGE_POWERED_VENT entry Mode INWARD
-sbn LARGE_POWERED_VENT entry On 1
+pop r0 # exit
+pop r1 # entry
+sbn LARGE_POWERED_VENT r0 Mode OUTWARD
+sbn LARGE_POWERED_VENT r0 On 1
+sbn LARGE_POWERED_VENT r1 Mode INWARD
+sbn LARGE_POWERED_VENT r1 On 1
 yield
-sbn LARGE_POWERED_VENT exit PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
+sbn LARGE_POWERED_VENT r0 PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
 j ra
 
 stop_pumps:
@@ -196,12 +196,12 @@ bgtz r1 _wait_for_vacuum
 j ra
 
 wait_for_pressure: # push entry exit to wait for entry to be at least exit pressure
-pop exit
-pop entry
+pop r2 # exit
+pop r3 # entry
 _wait_for_pressure:
 yield
-lbn r0 GAS_SENSOR entry Pressure Maximum
-lbn r1 GAS_SENSOR exit Pressure Maximum
+lbn r0 GAS_SENSOR r3 Pressure Maximum
+lbn r1 GAS_SENSOR r2 Pressure Maximum
 blt r0 r1 _wait_for_pressure
 j ra
 
