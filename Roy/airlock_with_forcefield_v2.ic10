@@ -50,6 +50,11 @@ j start
 
 interrupt:
 # important code that also needs to run when waiting for something
+# careful that any register you override needs to be replaced
+# because those could be used by the calling method
+# (maybe we should reserve r9 and 10.)
+# you also need to ensure the stack is cleared if 
+# you do not jump to ra
 yield
 j ra
 
@@ -144,11 +149,12 @@ push B
 j ra # continue main loop
 
 cycle: # push a; push a'; push b'; push b;
-push ra
 pop exit
 pop exit_prime
 pop entry_prime
 pop entry
+
+push ra
 sb BLAST_DOOR Open 0
 
 push entry_prime
