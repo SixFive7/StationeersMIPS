@@ -33,8 +33,7 @@ define A_PRIME HASH("A'")   # Everything on the inside of A
 define B HASH("B")          # Everything on the outside of B
 define B_PRIME HASH("B'")   # Everything on the inside of B
 
-alias mode r10
-alias param r11
+alias mode r11
 alias entry r12
 alias exit r13
 alias entry_prime r14
@@ -49,10 +48,16 @@ yield
 
 start:
 jal power_save
+jal interrupt
 jal select_mode # might skip back to start if we don't need doorbell/cycle
 jal doorbell
 jal cycle # doorbell has pushed the right arguments
 j start
+
+interrupt:
+# important code that also needs to run when waiting for something
+yield
+j ra
 
 power_save:
 # Console/computer power saving
@@ -94,7 +99,7 @@ j start # and can continue normal operations
 # closes the airlock, expells all air to the right sides
 # and then disables the forcefield
 change_mode_setup:
-move param ra
+push ra
 sb BLAST_DOOR Open 0 # Note: space is still separate by force fields
 push A_PRIME
 push A
@@ -109,7 +114,8 @@ jal wait_for_vacuum # wait until B side is a vacuum
 jal stop_pumps
 sb FORCE_FIELD_DOOR On 0 # disable forcefield
 jal exhume # empty buffers
-j param
+pop ra
+j ra
 
 doorbell:
 yield
@@ -144,7 +150,7 @@ push B
 j ra # continue main loop
 
 cycle: # push a; push a'; push b'; push b;
-move param ra
+push ra
 pop exit
 pop exit_prime
 pop entry_prime
@@ -170,7 +176,8 @@ jal stop_pumps
 
 sbn BLAST_DOOR exit Open 1
 jal exhume
-j param
+pop ra
+j ra
 
 start_pumps: # push entry, push exit, pumps entry->exit
 pop r0 # exit
@@ -190,7 +197,9 @@ j ra
 wait_for_vacuum: # push gas sensor
 pop r0
 _wait_for_vacuum:
-yield  # instead of yielding, go to the main loop and request to return here
+push ra
+jal interrupt
+pop ra
 lbn r1 GAS_SENSOR r0 Pressure Maximum
 bgtz r1 _wait_for_vacuum
 j ra
@@ -199,7 +208,9 @@ wait_for_pressure: # push entry exit to wait for entry to be at least exit press
 pop r2 # exit
 pop r3 # entry
 _wait_for_pressure:
-yield
+push ra
+jal interrupt
+pop ra
 lbn r0 GAS_SENSOR r3 Pressure Maximum
 lbn r1 GAS_SENSOR r2 Pressure Maximum
 blt r0 r1 _wait_for_pressure
@@ -214,7 +225,9 @@ yield
 sbn LARGE_POWERED_VENT A PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
 sbn LARGE_POWERED_VENT B PressureExternal 100000 # Unlimit the exhaust vent (yield bug)
 _exhume:
-yield
+push ra
+jal interrupt
+pop ra
 lb r0 PIPE_ANALYZER Pressure Maximum
 bgtz r0 _exhume
 sb LARGE_POWERED_VENT On 0
