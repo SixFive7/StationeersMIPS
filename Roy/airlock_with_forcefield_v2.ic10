@@ -12,7 +12,8 @@ define COMPUTER_BIG_SCREEN_WALL_MOUNTED -868055390
 
 # The airlock mode depends on the power available
 # for the forcefield and entire airlock
-define FORCEFIELD_POWER_THRESHOLD 0.25
+define FORCEFIELD_POWER_THRESHOLD_MIN 0.25
+define FORCEFIELD_POWER_THRESHOLD_MAX 0.30
 define EMERGENCY_POWER_THRESHOLD 0.10
 
 define OUTWARD 0
@@ -73,7 +74,11 @@ lb r0 AREA_POWER_CONTROL Ratio Maximum # Main batteries
 ble r0 EMERGENCY_POWER_THRESHOLD _select_mode_emergency
 
 lb r0 AREA_POWER_CONTROL_REVERSED Ratio Maximum # Force field battery
-ble r0 FORCEFIELD_POWER_THRESHOLD _select_mode_airlock
+slt r0 r0 FORCEFIELD_POWER_THRESHOLD_MIN
+seq r1 mode MODE_AIRLOCK
+or r0 r0 r1
+bgtz r0 _select_mode_airlock
+
 _select_mode_forcefield:
 sb FORCE_FIELD_DOOR On 1
 sb BLAST_DOOR Open 1
@@ -82,6 +87,9 @@ j start # short circuit main loop
 
 _select_mode_airlock:
 seq r0 mode MODE_AIRLOCK
+lb r1 AREA_POWER_CONTROL_REVERSED Ratio Maximum # Force field battery
+sge r1 r1 FORCEFIELD_POWER_THRESHOLD_MAX # hysterisis
+select mode r1 MODE_FORCEFIELD MODE_AIRLOCK
 beq r0 1 ra # continue main loop if we are already setup in airlock mode
 jal change_mode_setup
 move mode MODE_AIRLOCK # we are not in airlock mode

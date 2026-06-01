@@ -34,7 +34,7 @@ alias exit r15
 # Reset to both doors closed
 # with A as entry and B as exit
 sb BLAST_DOOR Open 0
-sb FORCE_FIELD_DOOR On 1
+sb FORCE_FIELD_DOOR On 0
 sb LARGE_POWERED_VENT On 0
 yield
 
@@ -176,6 +176,7 @@ ble r0 FORCE_FIELD_POWER_OFF_THRESHOLD _select_mode_primitive
 
 # We have enough power in all batteries to use the airlock
 sbn FORCE_FIELD_DOOR M On 1
+sbn FORCE_FIELD_DOOR M Open 0
 sb BLAST_DOOR Open 1
 j start # skip all other behaviors
 
