@@ -81,6 +81,7 @@ bgtz r0 _select_mode_airlock
 
 _select_mode_forcefield:
 sb FORCE_FIELD_DOOR On 1
+sb FORCE_FIELD_DOOR Open 0 # prevent gasses from moving around
 sb BLAST_DOOR Open 1
 move mode MODE_FORCEFIELD
 j start # short circuit main loop
