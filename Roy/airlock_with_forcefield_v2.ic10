@@ -100,33 +100,40 @@ seq r0 mode_override MODE_OVERRIDE_FORCE_OPEN
 bgtz r0 _select_mode_force_open
 
 seq r0 mode_override MODE_OVERRIDE_POWER_SAVE
-bgtz r0 _select_mode_power_save
+bgtz r0 _select_mode_airlock
 
 lb r0 AREA_POWER_CONTROL Ratio Maximum # Main batteries
 ble r0 EMERGENCY_POWER_THRESHOLD _select_mode_emergency
 
+# Enter forcefield mode if we have enough power
 lb r0 AREA_POWER_CONTROL_REVERSED Ratio Maximum # Force field battery
-slt r0 r0 FORCEFIELD_POWER_THRESHOLD_MIN
-seq r1 mode MODE_AIRLOCK
-or r0 r0 r1
-bgtz r0 _select_mode_airlock
+sge r0 r0 FORCEFIELD_POWER_THRESHOLD_MAX # hysterisis
+bgtz r0 _select_mode_forcefield
+
+# Enter forcefield mode if we still have some some power and the force field was on
+lb r0 AREA_POWER_CONTROL_REVERSED Ratio Maximum # Force field battery
+sge r0 r0 FORCEFIELD_POWER_THRESHOLD_MIN # hysterisis
+lb r1 FORCE_FIELD_DOOR On Maximum
+and r0 r0 r1
+bgtz r0 _select_mode_forcefield
+
+# default to airlock
+_select_mode_airlock:
+seq r0 mode MODE_AIRLOCK
+beq r0 1 ra # continue main loop if we are already setup in airlock mode
+jal change_mode_setup
+move mode MODE_AIRLOCK # we are not in airlock mode
+j start # and can continue normal operations
 
 _select_mode_forcefield:
+seq r0 mode MODE_FORCEFIELD
+beq r0 1 start # short circuit main loop
+jal change_mode_setup
 sb FORCE_FIELD_DOOR On 1
 sb FORCE_FIELD_DOOR Open 0 # prevent gasses from moving around
 sb BLAST_DOOR Open 1
 move mode MODE_FORCEFIELD
 j start # short circuit main loop
-
-_select_mode_airlock:
-seq r0 mode MODE_AIRLOCK
-lb r1 AREA_POWER_CONTROL_REVERSED Ratio Maximum # Force field battery
-sge r1 r1 FORCEFIELD_POWER_THRESHOLD_MAX # hysterisis
-select mode r1 MODE_FORCEFIELD MODE_AIRLOCK
-beq r0 1 ra # continue main loop if we are already setup in airlock mode
-jal change_mode_setup
-move mode MODE_AIRLOCK # we are not in airlock mode
-j start # and can continue normal operations
 
 _select_mode_emergency:
 seq r0 mode MODE_EMERGENCY
@@ -136,13 +143,6 @@ jal change_mode_setup
 move mode MODE_EMERGENCY # we are now in emergency mode
 j start # and can continue normal operations
 
-_select_mode_power_save:
-seq r0 mode MODE_AIRLOCK
-beq r0 1 ra # continue main loop if we are already setup in airlock mode
-jal change_mode_setup
-move mode MODE_AIRLOCK
-j start
-
 _select_mode_force_open:
 sb BLAST_DOOR Open 1
 sb FORCE_FIELD_DOOR On 0
@@ -151,6 +151,44 @@ j start
 # closes the airlock, expells all air to the right sides
 # and then disables the forcefield
 change_mode_setup:
+push ra
+lb r4 FORCE_FIELD_DOOR On Maximum
+beqz r4 _change_mode_setup_turn_force_field_on
+_change_mode_setup_turn_force_field_off:
+sb BLAST_DOOR Open 0 # Note: space is still separate by force fields
+push A_PRIME
+push A
+jal start_pumps # pump out A side
+push B_PRIME
+push B
+jal start_pumps # pump out B side at the same time
+push A_PRIME
+jal wait_for_vacuum # wait until A side is a vacuum
+push B_PRIME
+jal wait_for_vacuum # wait until B side is a vacuum
+jal stop_pumps
+sb FORCE_FIELD_DOOR On 0 # disable forcefield
+jal exhume # empty buffers
+pop ra
+j ra
+
+_change_mode_setup_turn_force_field_on:
+lbn r4 BLAST_DOOR A Open Maximum # check which door side was open
+select r5 r4 A B
+select r6 r4 A_PRIME B_PRIME
+sb BLAST_DOOR Open 0 # Close the doors, note airlock is filled with air from ONE side
+push r6
+push r5
+jal start_pumps # pump out A side
+push r6
+jal wait_for_vacuum # wait until A side is a vacuum
+jal stop_pumps
+sb FORCE_FIELD_DOOR On 1 # enable forcefield
+sb FORCE_FIELD_DOOR Open 0
+jal exhume # empty buffers
+pop ra
+j ra
+
 push ra
 sb BLAST_DOOR Open 0 # Note: space is still separate by force fields
 push A_PRIME
