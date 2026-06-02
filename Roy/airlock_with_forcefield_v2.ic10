@@ -9,6 +9,7 @@ define AREA_POWER_CONTROL 1999523701
 define AREA_POWER_CONTROL_REVERSED -1032513487
 define FORCE_FIELD_DOOR 696254815
 define COMPUTER_BIG_SCREEN_WALL_MOUNTED -868055390
+define KEYPAD 643584580
 
 # The airlock mode depends on the power available
 # for the forcefield and entire airlock
@@ -19,6 +20,8 @@ define EMERGENCY_POWER_THRESHOLD 0.10
 define OUTWARD 0
 define INWARD 1
 
+define MODE_OVERRIDE_FORCE_OPEN 112
+define MODE_OVERRIDE_POWER_SAVE 314
 define MODE_FORCEFIELD 2
 define MODE_AIRLOCK 1
 define MODE_EMERGENCY 0
@@ -27,7 +30,12 @@ define A HASH("A")          # Everything on the outside of A
 define A_PRIME HASH("A'")   # Everything on the inside of A
 define B HASH("B")          # Everything on the outside of B
 define B_PRIME HASH("B'")   # Everything on the inside of B
+define OVERRIDE_A HASH("Airlock Override A")
+define OVERRIDE_B HASH("Airlock Override A'")
+define OVERRIDE_C HASH("Airlock Override B")
+define OVERRIDE_D HASH("Airlock Override B'")
 
+alias mode_override r10
 alias mode r11
 alias entry r12
 alias exit r13
@@ -35,6 +43,7 @@ alias entry_prime r14
 alias exit_prime r15
 
 # Reset
+sb KEYPAD Setting 0
 move mode MODE_EMERGENCY
 sb BLAST_DOOR Open 0
 sb FORCE_FIELD_DOOR On 0
@@ -56,6 +65,23 @@ interrupt:
 # (maybe we should reserve r9 and 10.)
 # you also need to ensure the stack is cleared if 
 # you do not jump to ra
+
+lbn r9 KEYPAD OVERRIDE_A Setting Maximum
+lbn r8 KEYPAD OVERRIDE_B Setting Maximum
+lbn r7 KEYPAD OVERRIDE_C Setting Maximum
+lbn r6 KEYPAD OVERRIDE_D Setting Maximum
+
+# find the value that is different via the sum identity function
+add    r6 r6 r7      # r6 = r6 + r7
+add    r6 r6 r8      # r6 += r8
+add    r6 r6 r9      # r6 = sum of all four
+seq    r9 r9 r8      # r9 = (r9 == r8) ? 1 : 0   (original r9 no longer needed)
+select r7 r9 r8 r7   # r7 = common value: r8 if r9==r8, else r7
+mul    r7 r7 3       # r7 = 3 * common
+sub    r6 r6 r7      # r6 = the odd value
+
+move mode_override r6
+sb KEYPAD Setting mode_override
 yield
 j ra
 
@@ -70,6 +96,12 @@ sb COMPUTER_BIG_SCREEN_WALL_MOUNTED On r0
 j ra
 
 select_mode:
+seq r0 mode_override MODE_OVERRIDE_FORCE_OPEN
+bgtz r0 _select_mode_force_open
+
+seq r0 mode_override MODE_OVERRIDE_POWER_SAVE
+bgtz r0 _select_mode_power_save
+
 lb r0 AREA_POWER_CONTROL Ratio Maximum # Main batteries
 ble r0 EMERGENCY_POWER_THRESHOLD _select_mode_emergency
 
@@ -103,6 +135,18 @@ beq r0 1 start # short circuit main loop if we are already setup in emergency mo
 jal change_mode_setup
 move mode MODE_EMERGENCY # we are now in emergency mode
 j start # and can continue normal operations
+
+_select_mode_power_save:
+seq r0 mode MODE_AIRLOCK
+beq r0 1 ra # continue main loop if we are already setup in airlock mode
+jal change_mode_setup
+move mode MODE_AIRLOCK
+j start
+
+_select_mode_force_open:
+sb BLAST_DOOR Open 1
+sb FORCE_FIELD_DOOR On 0
+j start
 
 # closes the airlock, expells all air to the right sides
 # and then disables the forcefield
