@@ -1,11 +1,19 @@
 -- Airlock code
--- set the following variables to change the labels in the airlock
+-- Set the following variables according to the side of the airlock (A, A' or B, B')
+local outsideId = "A"
+local insideId = "A'"
+--local outsideId = "B"
+--local insideId = "B'"
 
-local AIRLOCK_STATUS = "Airlock Status"
-local AIRLOCK_LABEL = "Airlock"
-local BUFFERS_LABEL = "Buffers"
-local SIDE_B_LABEL = "Left Room"
-local SIDE_A_LABEL = "Right Room"
+local outsideHash = hash(outsideId)
+local insideHash = hash(insideId)
+
+local AIRLOCK_STATUS = "Airlock Status " .. outsideId
+local INSIDE_LABEL = "Inside"
+local OUTSIDE_LABEL = "Outside"
+local BUFFER_LABEL = "Buffer"
+local FORCEFIELD_POWER_LABEL = "Forcefield APC"
+local AIRLOCK_POWER_LABEL = "Airlock APC"
 
 --
 local ui = ss.ui.surface("main")
@@ -29,20 +37,24 @@ local cellHeight = (hTable / 2) - (verticalMargin * 2)
 local blastDoorHash = 337416191
 local gasSensorHash = -1252983604
 local pipeAnalyzerHash = 435685051
-local aHash = hash("A")
-local bHash = hash("B")
-local mHash = hash("M")
+local apcHash = 1999523701
+local apcReversedHash = -1032513487
 local historyLength = 50
-local pressureAHistory = {}
-local pressureMHistory = {}
-local pressureBHistory = {}
-local pressureTHistory = {}
+
+--
+local POWER_LABEL = (outsideId == "A") and FORCEFIELD_POWER_LABEL or AIRLOCK_POWER_LABEL
+local selectedApcHash = (outsideId == "A") and apcReversedHash or apcHash
+
+local pressureInsideHistory = {}
+local pressureOutsideHistory = {}
+local pressureBufferHistory = {}
+local powerHistory = {}
 
 for i = 1, historyLength do
-    pressureAHistory[i] = 0
-    pressureMHistory[i] = 0
-    pressureBHistory[i] = 0
-    pressureTHistory[i] = 0
+    pressureInsideHistory[i] = 0
+    pressureOutsideHistory[i] = 0
+    pressureBufferHistory[i] = 0
+    powerHistory[i] = 0
 end
 
 -- index is one based
@@ -74,8 +86,10 @@ local function cornerY(i)
 end
 
 -- column and row are one based
-local function createAirlockCell(id, title, history, column, row, maxPressure)
+local function createAirlockCell(id, title, history, column, row, maxPressure, dialLabel, invert)
     maxPressure = maxPressure or 200
+    dialLabel = dialLabel or "kPa"
+    invert = invert or false
     local x = cellX(column)
     local y = cellY(row)
     
@@ -97,9 +111,10 @@ local function createAirlockCell(id, title, history, column, row, maxPressure)
             value = 0,
             min = 0,
             max = maxPressure,
-            warn = 0.65,
-            danger = 0.85,
-            label = "kPa",
+            warn = 0.75,
+            danger = 0.90,
+            label = dialLabel,
+            invert = invert
         },
         style = {
             bg = "#111827",
@@ -135,7 +150,7 @@ local function createTitle(id, title)
         style = { font_size = 20, color = "#22C55E" }
     })
 
-    return title
+    return label
 end
 
 local function createSpinner(id, column, row)    
@@ -153,10 +168,10 @@ local function createSpinner(id, column, row)
 end
 
 local title = createTitle("title", AIRLOCK_STATUS)
-local m_label, m_gauge, m_spark = createAirlockCell("m", AIRLOCK_LABEL, pressureAHistory, 1, 1)
-local t_label, t_gauge, t_spark = createAirlockCell("t", BUFFERS_LABEL, pressureTHistory, 2, 1, 1000)
-local b_label, b_gauge, b_spark = createAirlockCell("b", SIDE_B_LABEL, pressureBHistory, 1, 2)
-local a_label, a_gauge, a_spark = createAirlockCell("a", SIDE_A_LABEL, pressureMHistory, 2, 2)
+local inside_label, inside_gauge, inside_spark = createAirlockCell("m", INSIDE_LABEL, pressureInsideHistory, 1, 1)
+local outside_label, outside_gauge, outside_spark = createAirlockCell("a", OUTSIDE_LABEL, pressureOutsideHistory, 2, 1)
+local buffer_label, buffer_gauge, buffer_spark = createAirlockCell("t", BUFFER_LABEL, pressureBufferHistory, 1, 2, 1000)
+local power_label, power_gauge, power_spark = createAirlockCell("b", POWER_LABEL, powerHistory, 2, 2, 100, "%", true)
 
 local spinner1 = createSpinner("tl", 1, 1)
 local spinner2 = createSpinner("tr", 2, 1)
@@ -165,46 +180,33 @@ local spinner4 = createSpinner("br", 2, 2)
 
 ui:commit()
 
+function updateCell(data, history, gauge, spark)    
+    table.remove(history, 1)    
+    history[#history + 1] = data
+    gauge:set_props({ value = history[#history] })
+    spark:set_props({ data = history })
+end
+
 local accum = 0
 function tick(dt)
     accum = accum + dt
     if accum < 0.5 then return end
     accum = accum - 0.5
+
+    local outsidePressure = ic.batch_read_name(gasSensorHash, outsideHash, LT.Pressure, LBM.Average)
+    updateCell(outsidePressure, pressureOutsideHistory, outside_gauge, outside_spark) 
     
-    local pressure = 0
-    
-    pressure = ic.batch_read_name(gasSensorHash, aHash, LT.Pressure, LBM.Average)    
-    table.remove(pressureAHistory, 1)    
-    pressureAHistory[#pressureAHistory + 1] = pressure
-    
-    pressure = ic.batch_read_name(gasSensorHash, mHash, LT.Pressure, LBM.Average)
-    table.remove(pressureMHistory, 1)
-    pressureMHistory[#pressureMHistory + 1] = pressure
-    
-    pressure = ic.batch_read_name(gasSensorHash, bHash, LT.Pressure, LBM.Average)
-    table.remove(pressureBHistory, 1)
-    pressureBHistory[#pressureBHistory + 1] = pressure
+    local bufferPressure = ic.batch_read_name(pipeAnalyzerHash, outsideHash, LT.Pressure, LBM.Average)
+    updateCell(bufferPressure, pressureBufferHistory, buffer_gauge, buffer_spark) 
 
-    pressure = ic.batch_read_name(pipeAnalyzerHash, mHash, LT.Pressure, LBM.Average)
-    table.remove(pressureTHistory, 1)
-    pressureTHistory[#pressureTHistory + 1] = pressure
+    local insidePressure = ic.batch_read_name(gasSensorHash, insideHash, LT.Pressure, LBM.Average)
+    updateCell(insidePressure, pressureInsideHistory, inside_gauge, inside_spark) 
 
-    b_gauge:set_props({ value = pressureBHistory[#pressureBHistory] })
-    b_spark:set_props({ data = pressureBHistory })
+    local power = ic.batch_read(selectedApcHash, LT.Ratio, LBM.Average)
+    updateCell(power * 100, powerHistory, power_gauge, power_spark) 
 
-    m_gauge:set_props({ value = pressureMHistory[#pressureMHistory] })
-    m_spark:set_props({ data = pressureMHistory })
-
-    a_gauge:set_props({ value = pressureAHistory[#pressureAHistory] })
-    a_spark:set_props({ data = pressureAHistory })
-
-    t_gauge:set_props({ value = pressureTHistory[#pressureTHistory] })
-    t_spark:set_props({ data = pressureTHistory })
-
-    local openA = ic.batch_read_name(blastDoorHash, aHash, LT.Open, LBM.Average)
-    local openB = ic.batch_read_name(blastDoorHash, bHash, LT.Open, LBM.Average)
-
-    if openA == 0 and openB == 0 then
+    local open = ic.batch_read_name(blastDoorHash, outsideHash, LT.Open, LBM.Average)
+    if open == 0 then
         spinner1:set_style({ color = "#ff5151"})
         spinner2:set_style({ color = "#ff5151"})
         spinner3:set_style({ color = "#ff5151"})
