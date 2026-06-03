@@ -146,10 +146,13 @@ j start # and can continue normal operations
 _select_mode_force_open:
 sb BLAST_DOOR Open 1
 sb FORCE_FIELD_DOOR On 0
+move mode MODE_OVERRIDE_FORCE_OPEN # invalidate cached mode so exiting re-runs setup
 j start
 
 # closes the airlock, expells all air to the right sides
 # and then disables the forcefield
+# TODO: bug, if the forcefield is off (due to low power) and we move into airlock/energy_save mode
+# it turns the forcefield ON instead of off, I guess we should just push what we want to happen
 change_mode_setup:
 push ra
 lb r4 FORCE_FIELD_DOOR On Maximum
@@ -185,24 +188,6 @@ jal wait_for_vacuum # wait until A side is a vacuum
 jal stop_pumps
 sb FORCE_FIELD_DOOR On 1 # enable forcefield
 sb FORCE_FIELD_DOOR Open 0
-jal exhume # empty buffers
-pop ra
-j ra
-
-push ra
-sb BLAST_DOOR Open 0 # Note: space is still separate by force fields
-push A_PRIME
-push A
-jal start_pumps # pump out A side
-push B_PRIME
-push B
-jal start_pumps # pump out B side at the same time
-push A_PRIME
-jal wait_for_vacuum # wait until A side is a vacuum
-push B_PRIME
-jal wait_for_vacuum # wait until B side is a vacuum
-jal stop_pumps
-sb FORCE_FIELD_DOOR On 0 # disable forcefield
 jal exhume # empty buffers
 pop ra
 j ra
@@ -273,6 +258,7 @@ j ra
 start_pumps: # push entry, push exit, pumps entry->exit
 pop r0 # exit
 pop r1 # entry
+yield # Always yield so you cannot accidentally set mode twice in one tick (which causes bugs)
 sbn LARGE_POWERED_VENT r0 Mode OUTWARD
 sbn LARGE_POWERED_VENT r0 On 1
 sbn LARGE_POWERED_VENT r1 Mode INWARD
@@ -286,6 +272,7 @@ sb LARGE_POWERED_VENT On 0
 j ra
 
 wait_for_vacuum: # push gas sensor
+s db Setting 100
 pop r0
 _wait_for_vacuum:
 push ra
@@ -296,6 +283,7 @@ bgtz r1 _wait_for_vacuum
 j ra
 
 wait_for_pressure: # push entry exit to wait for entry to be at least exit pressure
+s db Setting 200
 pop r2 # exit
 pop r3 # entry
 _wait_for_pressure:
@@ -308,6 +296,8 @@ blt r0 r1 _wait_for_pressure
 j ra
 
 exhume: # exhumes all gasses in buffers
+s db Setting 300
+yield # Always yield so you cannot accidentally set mode twice in one tick (which causes bugs)
 sbn LARGE_POWERED_VENT A Mode OUTWARD
 sbn LARGE_POWERED_VENT A On 1
 sbn LARGE_POWERED_VENT B Mode OUTWARD
