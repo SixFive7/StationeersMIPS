@@ -19,6 +19,8 @@ define EMERGENCY_POWER_THRESHOLD 0.10
 
 define OUTWARD 0
 define INWARD 1
+define OFF 0
+define ON 1
 
 define MODE_OVERRIDE_FORCE_OPEN 112
 define MODE_OVERRIDE_POWER_SAVE 314
@@ -121,6 +123,7 @@ bgtz r0 _select_mode_forcefield
 _select_mode_airlock:
 seq r0 mode MODE_AIRLOCK
 beq r0 1 ra # continue main loop if we are already setup in airlock mode
+push OFF
 jal change_mode_setup
 move mode MODE_AIRLOCK # we are not in airlock mode
 j start # and can continue normal operations
@@ -128,9 +131,8 @@ j start # and can continue normal operations
 _select_mode_forcefield:
 seq r0 mode MODE_FORCEFIELD
 beq r0 1 start # short circuit main loop
+push ON
 jal change_mode_setup
-sb FORCE_FIELD_DOOR On 1
-sb FORCE_FIELD_DOOR Open 0 # prevent gasses from moving around
 sb BLAST_DOOR Open 1
 move mode MODE_FORCEFIELD
 j start # short circuit main loop
@@ -139,6 +141,7 @@ _select_mode_emergency:
 seq r0 mode MODE_EMERGENCY
 beq r0 1 start # short circuit main loop if we are already setup in emergency mode
 # not that this means we never move forward to the cycling logic so doors stay closed
+push OFF
 jal change_mode_setup
 move mode MODE_EMERGENCY # we are now in emergency mode
 j start # and can continue normal operations
@@ -150,13 +153,11 @@ move mode MODE_OVERRIDE_FORCE_OPEN # invalidate cached mode so exiting re-runs s
 j start
 
 # closes the airlock, expells all air to the right sides
-# and then disables the forcefield
-# TODO: bug, if the forcefield is off (due to low power) and we move into airlock/energy_save mode
-# it turns the forcefield ON instead of off, I guess we should just push what we want to happen
+# and then turns the forcefield on or off
 change_mode_setup:
+pop r4 # 0 for turn forcefield off, 1 for turn on
 push ra
-lb r4 FORCE_FIELD_DOOR On Maximum
-beqz r4 _change_mode_setup_turn_force_field_on
+bgtz r4 _change_mode_setup_turn_force_field_on
 _change_mode_setup_turn_force_field_off:
 sb BLAST_DOOR Open 0 # Note: space is still separate by force fields
 push A_PRIME
