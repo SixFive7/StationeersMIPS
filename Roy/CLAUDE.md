@@ -22,7 +22,7 @@ screen features come from these mods:
 Other mods used in this playthrough (see `../README.md`): More Lines of Code,
 Programmable Sign Mod, FloodLightMod, MorePowerMod.
 
-IC10 reference: https://stationeers-wiki.com/IC10
+Read the file ic10.pdf to learn how the IC10 (a MIPS inspired programming language) work
 
 ## Trustworthy game data
 

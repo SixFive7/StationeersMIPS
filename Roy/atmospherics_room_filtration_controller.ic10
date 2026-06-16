@@ -1,0 +1,87 @@
+# WHAT IF ICE (WATER) ENTERS THE CRUSHERS?
+define FILTRATION -348054045
+define FILTRATION_MIRRORED -94400699
+define TURBO_PUMP 1310794736
+define ICE_CRUSHER 443849486
+
+define MIN_ICE_CRUSHER_TEMP 305
+define L HASH("L")
+define R HASH("R")
+define IDLE 0
+define ACTIVE 1
+
+alias type r15
+
+sb ICE_CRUSHER Lock 1
+sb ICE_CRUSHER On 1
+sb ICE_CRUSHER Activate IDLE
+sb ICE_CRUSHER Setting MIN_ICE_CRUSHER_TEMP
+
+sb FILTRATION Lock 1
+sb FILTRATION On 1
+sb FILTRATION Mode IDLE
+sb FILTRATION_MIRRORED Lock 1
+sb FILTRATION_MIRRORED On 1
+sb FILTRATION_MIRRORED Mode IDLE
+
+sb TURBO_PUMP Lock 1
+sb TURBO_PUMP On 0
+sb TURBO_PUMP Mode 0
+sb TURBO_PUMP Setting 100
+
+loop:
+yield
+
+push L
+jal configure_ice_crusher
+
+push R
+jal configure_ice_crusher
+
+jal configure_turbo_pump
+
+push FILTRATION
+jal configure_filtration_unit
+
+push FILTRATION_MIRRORED
+jal configure_filtration_unit
+
+j loop
+
+# Call with one argument
+# - tos: ice crusher name
+configure_ice_crusher:
+# Enable if there is something to crush
+pop r1
+lbns r0 ICE_CRUSHER r1 0 Occupied Maximum
+sgtz r0 r0
+sbn ICE_CRUSHER r1 On r0
+j ra
+
+# Call with zero arguments
+configure_turbo_pump:
+# Enable pump if the filtration units measure pressure
+# in the same pipe network
+lb r0 FILTRATION PressureOutput2 Maximum
+lb r1 FILTRATION_MIRRORED PressureOutput2 Maximum
+max r0 r0 r1
+sgtz r0 r0
+sb TURBO_PUMP Mode r0
+j ra
+
+# Call with one argument
+# - tos: filtration unit type
+configure_filtration_unit:
+# Enable if there is input pressure..
+pop type
+lb r0 type PressureInput Maximum
+sgtz r0 r0
+# .. and all slots are filled with working filters
+lbs r1 type 0 Quantity Minimum
+lbs r2 type 1 Quantity Minimum
+min r1 r1 r2
+sgtz r1 r1
+
+min r0 r0 r1
+sb type Mode r0
+j ra
