@@ -3,6 +3,7 @@ define DIGITAL_VALVE -1280984102
 define BACK_PRESSURE_REGULATOR -1149857558
 define PIPE_HEATER -419758574
 define DIAL 554524804
+define MEMORY -851746783
 
 define K_MIN_DIAL HASH("kMin")
 define K_MAX_DIAL HASH("kMax")
@@ -40,6 +41,7 @@ lbn kMin DIAL K_MIN_DIAL Setting Maximum
 lbn kMax DIAL K_MAX_DIAL Setting Maximum
 lb temperature PIPE_ANALYZER Temperature Maximum
 lb pressure PIPE_ANALYZER Pressure Maximum
+sb MEMORY Setting pressure
 
 # Ensure the kMax dial is always set to a setting higher than the kMin dial
 slt r0 kMin kMax

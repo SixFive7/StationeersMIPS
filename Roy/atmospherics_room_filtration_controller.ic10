@@ -5,6 +5,7 @@ define TURBO_PUMP 1310794736
 define ICE_CRUSHER 443849486
 
 define MIN_ICE_CRUSHER_TEMP 305
+define MAX_PRESSURE 50000
 define L HASH("L")
 define R HASH("R")
 define IDLE 0
@@ -51,10 +52,18 @@ j loop
 # Call with one argument
 # - tos: ice crusher name
 configure_ice_crusher:
-# Enable if there is something to crush
+# Enable if there is something to crush..
 pop r1
 lbns r0 ICE_CRUSHER r1 0 Occupied Maximum
 sgtz r0 r0
+
+#..and input pressure is OK
+lb r2 FILTRATION PressureInput Maximum
+lb r3 FILTRATION_MIRRORED PressureInput Maximum
+max r2 r2 r3
+slt r2 r2 MAX_PRESSURE
+min r0 r0 r2
+
 sbn ICE_CRUSHER r1 On r0
 j ra
 
@@ -62,11 +71,12 @@ j ra
 configure_turbo_pump:
 # Enable pump if the filtration units measure pressure
 # in the same pipe network
+# Note: there is always some spare space in the output
 lb r0 FILTRATION PressureOutput2 Maximum
 lb r1 FILTRATION_MIRRORED PressureOutput2 Maximum
 max r0 r0 r1
 sgtz r0 r0
-sb TURBO_PUMP Mode r0
+sb TURBO_PUMP On r0
 j ra
 
 # Call with one argument
@@ -76,12 +86,21 @@ configure_filtration_unit:
 pop type
 lb r0 type PressureInput Maximum
 sgtz r0 r0
-# .. and all slots are filled with working filters
+# .. and all slots are filled with working filters ..
 lbs r1 type 0 Quantity Minimum
 lbs r2 type 1 Quantity Minimum
 min r1 r1 r2
 sgtz r1 r1
 
+# .. and output pressure is OK
+# (Output2 is always OK since that is always near vacuum)
+lb r2 FILTRATION PressureOutput Maximum
+lb r3 FILTRATION_MIRRORED PressureOutput Maximum
+max r2 r2 r3
+s db Setting r2
+slt r2 r2 MAX_PRESSURE
+
 min r0 r0 r1
+min r0 r0 r2
 sb type Mode r0
 j ra

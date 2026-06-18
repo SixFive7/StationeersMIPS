@@ -1,0 +1,442 @@
+<noinclude>
+See [[IC10]] for the primary page for the IC10 instruction set. This page lists all available instructions
+</noinclude>
+
+== Utility ==
+
+{{ICInstruction|instruction=alias|description=Labels register or device reference with name, device references also affect what shows on the screws on the IC base.|syntax=alias str r?{{!}}d?
+|example=
+{{ICCode|
+alias dAutoHydro1 d0
+alias vTemperature r0
+}}}}
+{{ICInstruction|instruction=define|description=Creates a label that will be replaced throughout the program with the provided value.|syntax=define str num
+|example=
+{{ICCode|
+define ultimateAnswer 42
+move r0 ultimateAnswer # Store 42 in register 0
+}}}}
+{{ICInstruction|instruction=move|description=Register = provided num or register value.|syntax=move r? a(r?{{!}}num)
+|example=
+{{ICCode|move r0 42 # Store 42 in register 0}}}}
+{{ICInstruction
+| instruction = yield
+| description = Pauses execution for 1 tick
+| syntax = yield
+}}{{ICInstruction
+| instruction = sleep
+| description = Pauses execution on the IC for a seconds
+| syntax = sleep a(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = hcf
+| description = Halt and catch fire
+| note = Creates a small explosion, destroying the chip and starting fires on flammable atmospheres.
+| syntax = hcf
+}}
+== Mathematical ==
+
+{{ICInstruction
+| instruction = abs
+| description = Register = the absolute value of a
+| syntax = abs r? a(r?{{!}}num)
+| example = {{ICCode|
+define negativeNumber -10
+abs r0 negativeNumber # Compute the absolute value of -10 and store it in register 0
+}}
+}}{{ICInstruction
+| instruction = sgn
+| syntax = sgn r a(r?{{!}}num)
+| description = Stores the sign of a in the register: -1 if a is negative, 1 if positive, 0 if a is 0 (or not a number).
+}}{{ICInstruction
+| instruction = add
+| description = Register = a + b.
+| syntax = add r? a(r?{{!}}num) b(r?{{!}}num)
+| example = {{ICCode|add r0 r0 1 # increment r0 by one}}
+{{ICCode|
+define num1 10
+define num2 20
+add r0 num1 num2 # Add 10 and 20 and store the result in register 0
+}}
+}}
+{{ICInstruction
+| instruction = ceil
+| description = Register = smallest integer greater than a
+| syntax = ceil r? a(r?{{!}}num)
+| example = {{ICCode|
+define floatNumber 10.3
+ceil r0 floatNumber # Compute the ceiling of 10.3 and store it in register 0
+}}
+}}
+{{ICInstruction
+| instruction = div
+| description = Register = a / b
+| syntax = div r? a(r?{{!}}num) b(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = pow
+| description = Stores the result of raising a to the power of b in the register. Follows IEEE-754 standard for floating point arithmetic.
+| syntax = pow r? a(r?{{!}}num) b(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = exp
+| description = exp(a) or e^a
+| syntax = exp r? a(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = floor
+| description = Register = largest integer less than a
+| syntax = floor r? a(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = log
+| description = base e log(a) or ln(a)
+| syntax = log r? a(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = max
+| description = Register = max of a or b
+| note = If any of the values is NaN, NaN is returned.
+| syntax = max r? a(r?{{!}}num) b(r?{{!}}num)
+}}
+{{ICInstruction
+| instruction = min
+| description = Register = min of a or b
+| note = If any of the values is NaN, NaN is returned.
+| syntax = min r? a(r?{{!}}num) b(r?{{!}}num)
+}}{{ICInstruction
+| instruction = clamp
+| syntax = clamp r? a(r?{{!}}num) min(r?{{!}}num) max(r?{{!}}num)
+| description = Stores a clamped to the inclusive inclusive range [min, max] in the register provided.
+| note = Functionally equivalent to min(max(a,min),max).<br>If any of the values are NaN, NaN is returned.
+| example = clamp 100 10 50 = 50<br>
+clamp 0 10 50 = 10<br>
+clamp 20 10 50 = 20<br>
+}}{{ICInstruction
+| instruction = mod
+| description = Register = a mod b (note: NOT a % b)
+| syntax = mod r? a(r?{{!}}num) b(r?{{!}}num)
+| example = {{ICCode|
+mod r0 10 20 # Expected: r0 = 10
+mod r1 22 20 # Expected: r1 = 2
+mod r2 22 -20 # Expected: r2 = 18
+mod r2 22 -10 # Expected: r2 = 18
+mod r2 -7 4 # Expected: r2 = 1
+mod r2 -7 9 # Expected: r2 = 2
+}}
+}}
+{{ICInstruction|instruction=mul|description=Register = a * b|syntax=mul r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=rand|description=Register = a random value x with 0 <= x < 1|syntax=rand r?}}
+{{ICInstruction|instruction=round|description=Register = a rounded to nearest integer|syntax=round r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sqrt|description=Register = square root of a|syntax=sqrt r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sub|description=Register = a - b.|syntax=sub r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=trunc|description=Register = a with fractional part removed|syntax=trunc r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=lerp|description=Linearly interpolates between a and b by the ratio c, and places the result in the register provided. The ratio c will be clamped between 0 and 1.|syntax=lerp r? a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+
+=== Mathematical / Trigonometric ===
+
+{{ICInstruction|instruction=acos|description=Returns the angle (radians) whos cos is the specified value|syntax=acos r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=asin|description=Returns the angle (radians) whos sine is the specified value|syntax=asin r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=atan|description=Returns the angle (radians) whos tan is the specified value|syntax=atan r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=atan2|description=Returns the angle (radians) whose tangent is the quotient of two specified values: a (y) and b (x)|syntax=atan2 r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=cos|description=Returns the cosine of the specified angle (radians)|syntax=cos r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sin|description=Returns the sine of the specified angle (radians)|syntax=sin r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=tan|description=Returns the tan of the specified angle (radians) |syntax=tan r? a(r?{{!}}num)}}
+
+== Stack ==
+
+{{ICInstruction|instruction=clr|description=Clears the stack memory for the provided device.|syntax=clr d?}}
+{{ICInstruction|instruction=clrd|description=Seeks directly for the provided device id and clears the stack memory of that device|syntax=clrd id(r?{{!}}num)}}
+{{ICInstruction|instruction=get|description=Using the provided device, attempts to read the stack value at the provided address, and places it in the register.|syntax=get r? device(d?{{!}}r?{{!}}id) address(r?{{!}}num)}}
+{{ICInstruction|instruction=getd|description=Seeks directly for the provided device id, attempts to read the stack value at the provided address, and places it in the register.|syntax=getd r? id(r?{{!}}id) address(r?{{!}}num)}}
+{{ICInstruction|instruction=peek|description=Register = the value at the top of the stack|syntax=peek r?}}
+{{ICInstruction|instruction=poke|description=Stores the provided value at the provided address in the stack.|syntax=poke address(r?{{!}}num) value(r?{{!}}num)}}
+{{ICInstruction|instruction=pop|description=Register = the value at the top of the stack and decrements sp|syntax=pop r?}}
+{{ICInstruction|instruction=push|description=Pushes the value of a to the stack at sp and increments sp|syntax=push a(r?{{!}}num)}}
+{{ICInstruction|instruction=put|description=Using the provided device, attempts to write the provided value to the stack at the provided address.|syntax=put device(d?{{!}}r?{{!}}id) address(r?{{!}}num) value(r?{{!}}num)}}
+{{ICInstruction|instruction=putd|description=Seeks directly for the provided device id, attempts to write the provided value to the stack at the provided address.|syntax=putd id(r?{{!}}id) address(r?{{!}}num) value(r?{{!}}num)}}
+
+== Slot/Logic ==
+
+{{ICInstruction|instruction=l|description=Loads device LogicType to register by housing index value.|syntax=l r? device(d?{{!}}r?{{!}}id) logicType
+|example=
+Read from the device on d0 into register 0
+{{ICCode|l r0 d0 Setting}}
+Read the pressure from a sensor
+{{ICCode|l r1 d5 Pressure}}
+This also works with aliases. For example:
+{{ICCode|
+alias Sensor d0
+l r0 Sensor Temperature
+}}}}
+{{ICInstruction|instruction=lr|description=Loads reagent of device's ReagentMode where a hash of the reagent type to check for. ReagentMode can be either Contents (0), Required (1), Recipe (2). Can use either the word, or the number.|syntax=lr r? device(d?{{!}}r?{{!}}id) reagentMode int}}
+{{ICInstruction|instruction=ls|description=Loads slot LogicSlotType on device to register.|syntax=ls r? device(d?{{!}}r?{{!}}id) slotIndex logicSlotType
+|example=
+Read from the second slot of device on d0, stores 1 in r0 if it's occupied, 0 otherwise.
+{{ICCode|ls r0 d0 2 Occupied}}
+And here is the code to read the charge of an AIMeE:
+{{ICCode|
+alias robot d0
+alias charge r10
+ls charge robot 0 Charge
+}}}}
+{{ICInstruction|instruction=s|description=Stores register value to LogicType on device by housing index value.|syntax=s device(d?{{!}}r?{{!}}id) logicType r?
+|example=
+{{ICCode|
+s d0 Setting r0
+}}}}
+{{ICInstruction|instruction=ss|description=Stores register value to device stored in a slot LogicSlotType on device.|syntax=ss device(d?{{!}}r?{{!}}id) slotIndex logicSlotType r?}}
+{{ICInstruction|instruction=rmap|description=Given a reagent hash (signed 32bit int), store the corresponding prefab hash that the device expects to fulfill the reagent requirement. For example, on an autolathe, the hash for Iron will store the hash for ItemIronIngot.|syntax=rmap r? d? reagentHash(r?{{!}}num)}}
+
+=== Slot/Logic / Batched ===
+
+{{ICInstruction|instruction=lb|description=Loads LogicType from all output network devices with provided type hash using the provide batch mode. Average (0), Sum (1), Minimum (2), Maximum (3). Can use either the word, or the number.|syntax=lb r? deviceHash logicType batchMode
+|example=
+{{ICCode|lb r0 HASH("StructureWallLight") On Sum}}}}
+{{ICInstruction|instruction=lbn|description=Loads LogicType from all output network devices with provided type and name hashes using the provide batch mode. Average (0), Sum (1), Minimum (2), Maximum (3). Can use either the word, or the number.|syntax=lbn r? deviceHash nameHash logicType batchMode}}
+{{ICInstruction|instruction=lbns|description=Loads LogicSlotType from slotIndex from all output network devices with provided type and name hashes using the provide batch mode. Average (0), Sum (1), Minimum (2), Maximum (3). Can use either the word, or the number.|syntax=lbns r? deviceHash nameHash slotIndex logicSlotType batchMode}}
+{{ICInstruction|instruction=lbs|description=Loads LogicSlotType from slotIndex from all output network devices with provided type hash using the provide batch mode. Average (0), Sum (1), Minimum (2), Maximum (3). Can use either the word, or the number.|syntax=lbs r? deviceHash slotIndex logicSlotType batchMode}}
+{{ICInstruction|instruction=sb|description=Stores register value to LogicType on all output network devices with provided type hash.|syntax=sb deviceHash logicType r?
+|example=
+{{ICCode|sb HASH("StructureWallLight") On 1}}}}
+{{ICInstruction|instruction=sbn|description=Stores register value to LogicType on all output network devices with provided type hash and name.|syntax=sbn deviceHash nameHash logicType r?}}
+{{ICInstruction|instruction=sbs|description=Stores register value to LogicSlotType on all output network devices with provided type hash in the provided slot.|syntax=sbs deviceHash slotIndex logicSlotType r?}}
+
+== Bitwise ==
+
+{{ICInstruction|instruction=and|description=Performs a bitwise logical AND operation on the binary representation of two values. Each bit of the result is determined by evaluating the corresponding bits of the input values. If both bits are 1, the resulting bit is set to 1. Otherwise the resulting bit is set to 0.|syntax=and r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=nor|description=Performs a bitwise logical NOR (NOT OR) operation on the binary representation of two values. Each bit of the result is determined by evaluating the corresponding bits of the input values. If both bits are 0, the resulting bit is set to 1. Otherwise, if at least one bit is 1, the resulting bit is set to 0.|syntax=nor r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=not|description=Performs a bitwise logical NOT operation flipping each bit of the input value, resulting in a binary complement. If a bit is 1, it becomes 0, and if a bit is 0, it becomes 1.|syntax=not r? a(r?{{!}}num)
+|note=
+This is a bitwise operation, the NOT of 1 => -2, etc. You may want to use seqz instead}}
+{{ICInstruction|instruction=or|description=Performs a bitwise logical OR operation on the binary representation of two values. Each bit of the result is determined by evaluating the corresponding bits of the input values. If either bit is 1, the resulting bit is set to 1. If both bits are 0, the resulting bit is set to 0.|syntax=or r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sla|description=Performs a bitwise arithmetic left shift operation on the binary representation of a value. It shifts the bits to the left and fills the vacated rightmost bits with zeros (note that this is indistinguishable from 'sll').|syntax=sla r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sll|description=Performs a bitwise logical left shift operation on the binary representation of a value. It shifts the bits to the left and fills the vacated rightmost bits with zeros.|syntax=sll r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sra|description=Performs a bitwise arithmetic right shift operation on the binary representation of a value. It shifts the bits to the right and fills the vacated leftmost bits with a copy of the sign bit (the most significant bit).|syntax=sra r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=srl|description=Performs a bitwise logical right shift operation on the binary representation of a value. It shifts the bits to the right and fills the vacated leftmost bits with zeros|syntax=srl r? a(r?{{!}}num) b(r?{{!}}num)}}{{ICInstruction
+| instruction = rol
+| syntax = rol r? a(r?{{!}}num) b(r?{{!}}num)
+| description = Performs a bitwise left rotation on the binary representation of a by b places, wrapping the bits shifted out of the most significant position back into the least significant position.
+| example = rol $DEADBEEFCAFE2000 16 -> $BEEFCAFE2000DEAD
+}}{{ICInstruction
+| instruction = ror
+| syntax = ror r? a(r?{{!}}num) b(r?{{!}}num)
+| description = Performs a bitwise right rotation on the binary representation of A by B places, wrapping the bits shifted out of the least significant position back into the most significant position.
+| example = ror $1234, 4 -> $4000000000000123
+}}{{ICInstruction|instruction=xor|description=Performs a bitwise logical XOR (exclusive OR) operation on the binary representation of two values. Each bit of the result is determined by evaluating the corresponding bits of the input values. If the bits are different (one bit is 0 and the other is 1), the resulting bit is set to 1. If the bits are the same (both 0 or both 1), the resulting bit is set to 0.|syntax=xor r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=ext|description=Extracts a bit field from source value, beginning at bit offset for length bits and places result in the provided register. Payload cannot exceed 53 bits in final length.|syntax=ext r? source(r?{{!}}num) offset(r?{{!}}num) length(r?{{!}}num)}}
+{{ICInstruction|instruction=ins|description=Inserts a bit field into the provided register, beginning at bit offset for length bits. Payload cannot exceed 53 bits in final length. NOTE: As of 2026-01-12, stable version has a bug with parameter order (uses offset-length-field instead of field-offset-length). Beta version has correct order.
+|syntax=ins r? field(r?{{!}}num) offset(r?{{!}}num) length(r?{{!}}num)
+|example= 
+{{ICCode|move r0 $DE0000EF
+move r1 $ADBE
+ins r0 r1 8 16 #inserts field r1 at bit 8 for 16 bits, result: $DEADBEEF}}}}
+
+== Comparison ==
+
+{{ICInstruction|instruction=select|description=Register = b if a is non-zero, otherwise c|syntax=select r? a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)
+|example=
+<b>1)</b><br/>
+move r0 <s style="text-decoration-line:underline;text-decoration-color:red;">0</s><br/>
+select <s style="text-decoration-line:underline;text-decoration-color:red;>r1</s> r0 10 <s style="text-decoration-line:underline;text-decoration-color:red;>200</s>
+{{ICCode|
+move r0 0
+select r1 r0 10 200
+}}
+<br/>after run, <s style="text-decoration-line:underline;text-decoration-color:red;">r1 = 200</s>
+<br/><br/><b>2)</b><br/>
+move r0 <s style="text-decoration-line:underline;text-decoration-color:red;">5</s><br/>
+select <s style="text-decoration-line:underline;text-decoration-color:red;>r1</s> r0 <s style="text-decoration-line:underline;text-decoration-color:red;>10</s> 200
+{{ICCode|
+move r0 1
+select r1 r0 10 100
+}}
+<br/>after run, <s style="text-decoration-line:underline;text-decoration-color:red;">r1 = 10</s>
+|note=
+This operation can be used as a simple ternary condition}}
+
+=== Comparison / Device Pin ===
+
+{{ICInstruction|instruction=sdns|description=Register = 1 if device is not set, otherwise 0|syntax=sdns r? device(d?{{!}}r?{{!}}id)}}
+{{ICInstruction|instruction=sdse|description=Register = 1 if device is set, otherwise 0.|syntax=sdse r? device(d?{{!}}r?{{!}}id)}}
+
+=== Comparison / Value ===
+
+{{ICInstruction|instruction=sap|description=Register = 1 if abs(a - b) <= max(c * max(abs(a), abs(b)), float.epsilon * 8), otherwise 0|syntax=sap r? a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)
+|example=
+Set register to 1 if a and b are close enough to each other with the scaling factor of c. Equivalent to Python [https://docs.python.org/3/library/math.html#math.isclose math.isclose]}}
+{{ICInstruction|instruction=sapz|description=Register = 1 if abs(a) <= max(b * abs(a), float.epsilon * 8), otherwise 0|syntax=sapz r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=seq|description=Register = 1 if a == b, otherwise 0|syntax=seq r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=seqz|description=Register = 1 if a == 0, otherwise 0|syntax=seqz r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sge|description=Register = 1 if a >= b, otherwise 0|syntax=sge r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sgez|description=Register = 1 if a >= 0, otherwise 0|syntax=sgez r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sgt|description=Register = 1 if a > b, otherwise 0|syntax=sgt r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sgtz|description=Register = 1 if a > 0, otherwise 0|syntax=sgtz r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sle|description=Register = 1 if a <= b, otherwise 0|syntax=sle r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=slez|description=Register = 1 if a <= 0, otherwise 0|syntax=slez r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=slt|description=Register = 1 if a < b, otherwise 0|syntax=slt r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sltz|description=Register = 1 if a < 0, otherwise 0|syntax=sltz r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=sna|description=Register = 1 if abs(a - b) > max(c * max(abs(a), abs(b)), float.epsilon * 8), otherwise 0|syntax=sna r? a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=snan|description=Register = 1 if a is NaN, otherwise 0|syntax=snan r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=snanz|description=Register = 0 if a is NaN, otherwise 1|syntax=snanz r? a(r?{{!}}num)}}
+{{ICInstruction|instruction=snaz|description=Register = 1 if abs(a) > max(b * abs(a), float.epsilon), otherwise 0|syntax=snaz r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=sne|description=Register = 1 if a != b, otherwise 0|syntax=sne r? a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=snez|description=Register = 1 if a != 0, otherwise 0|syntax=snez r? a(r?{{!}}num)}}
+
+== Branching ==
+
+{{ICInstruction|instruction=j|description=Jump execution to line a|syntax=j int
+|example=
+{{ICCode|j 0 # jump line 0}}
+{{ICCode|
+j label # jump to a label
+
+label:
+# your code here
+}}}}
+{{ICInstruction|instruction=jal|description=Jump execution to line a and store next line number in ra|syntax=jal int
+|example=
+jal provides a way to do function calls in IC10 mips
+
+{{ICCode|
+move r0 1000
+move r1 0
+start:
+jal average
+s db Setting r0
+yield
+j start
+
+average:
+add r0 r0 r1
+div r0 r0 2
+j ra # jump back
+}}}}
+{{ICInstruction|instruction=jr|description=Relative jump to line a|syntax=jr int}}
+
+=== Branching / Device Pin ===
+
+{{ICInstruction|instruction=bdnvl|description=Will branch to line a if the provided device not valid for a load instruction for the provided logic type.|syntax=bdnvl device(d?{{!}}r?{{!}}id) logicType a(r?{{!}}num)}}
+{{ICInstruction|instruction=bdnvs|description=Will branch to line a if the provided device not valid for a store instruction for the provided logic type.|syntax=bdnvs device(d?{{!}}r?{{!}}id) logicType a(r?{{!}}num)}}
+{{ICInstruction|instruction=bdns|description=Branch to line a if device d isn't set|syntax=bdns d? a(r?{{!}}num)}}
+{{ICInstruction|instruction=bdnsal|description=Jump execution to line a and store next line number if device is not set|syntax=bdnsal d? a(r?{{!}}num)}}
+{{ICInstruction|instruction=bdse|description=Branch to line a if device d is set|syntax=bdse d? a(r?{{!}}num)}}
+{{ICInstruction|instruction=bdseal|description=Jump execution to line a and store next line number if device is set|syntax=bdseal d? a(r?{{!}}num)
+|example=
+{{ICCode|
+#Store line number and jump to line 32 if d0 is assigned.
+bdseal d0 32
+}}
+{{ICCode|
+#Store line in ra and jump to label HarvestCrop if device d0 is assigned.
+bdseal d0 HarvestCrop
+}}}}
+{{ICInstruction|instruction=brdns|description=Relative branch to line a if device is not set|syntax=brdns d? a(r?{{!}}num)}}
+{{ICInstruction|instruction=brdse|description=Relative branch to line a if device is set|syntax=brdse d? a(r?{{!}}num)}}
+
+=== Branching / Comparison ===
+
+{{ICInstruction|instruction=bap|description=Branch to line d if abs(a - b) <= max(c * max(abs(a), abs(b)), float.epsilon * 8)|syntax=bap a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num) d(r?{{!}}num)
+|example=
+Branch if a and b are close enough to each other with the scaling factor of c. Equivalent to Python [https://docs.python.org/3/library/math.html#math.isclose math.isclose]}}
+{{ICInstruction|instruction=brap|description=Relative branch to line d if abs(a - b) <= max(c * max(abs(a), abs(b)), float.epsilon * 8)|syntax=brap a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num) d(r?{{!}}num)}}
+{{ICInstruction|instruction=bapal|description=Branch to line c if a != b and store next line number in ra|syntax=bapal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num) d(r?{{!}}num)}}
+{{ICInstruction|instruction=bapz|description=Branch to line c if abs(a) <= max(b * abs(a), float.epsilon * 8)|syntax=bapz a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=brapz|description=Relative branch to line c if abs(a) <= max(b * abs(a), float.epsilon * 8)|syntax=brapz a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bapzal|description=Branch to line c if abs(a) <= max(b * abs(a), float.epsilon * 8) and store next line number in ra|syntax=bapzal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=beq|description=Branch to line c if a == b|syntax=beq a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=breq|description=Relative branch to line c if a == b|syntax=breq a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=beqal|description=Branch to line c if a == b and store next line number in ra|syntax=beqal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=beqz|description=Branch to line b if a == 0|syntax=beqz a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=breqz|description=Relative branch to line b if a == 0|syntax=breqz a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=beqzal|description=Branch to line b if a == 0 and store next line number in ra|syntax=beqzal a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bge|description=Branch to line c if a >= b|syntax=bge a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=brge|description=Relative branch to line c if a >= b|syntax=brge a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bgeal|description=Branch to line c if a >= b and store next line number in ra|syntax=bgeal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bgez|description=Branch to line b if a >= 0|syntax=bgez a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=brgez|description=Relative branch to line b if a >= 0|syntax=brgez a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bgezal|description=Branch to line b if a >= 0 and store next line number in ra|syntax=bgezal a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bgt|description=Branch to line c if a > b|syntax=bgt a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)
+|example=
+An example of a '''Schmitt''' trigger, turning on a device if the temperature is too low, and turning it off if it's too high and finally
+doing nothing if the temperature is within the desired range.
+{{ICCode|
+alias sensor d0
+alias device d1
+
+define mintemp 293.15
+define maxtemp 298.15
+
+start:
+yield
+l r0 sensor Temperature
+# If the temperature < mintemp, turn on the device
+blt r0 mintemp turnOn
+# If the temperature > maxtemp, turn off the device
+bgt r0 maxtemp turnOff
+j start
+
+turnOn:
+s device On 1
+j start
+turnOff:
+s device On 0
+j start
+}}}}
+{{ICInstruction|instruction=brgt|description=relative branch to line c if a > b|syntax=brgt a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bgtal|description=Branch to line c if a > b and store next line number in ra|syntax=bgtal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bgtz|description=Branch to line b if a > 0|syntax=bgtz a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=brgtz|description=Relative branch to line b if a > 0|syntax=brgtz a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bgtzal|description=Branch to line b if a > 0 and store next line number in ra|syntax=bgtzal a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=ble|description=Branch to line c if a <= b|syntax=ble a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=brle|description=Relative branch to line c if a <= b|syntax=brle a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bleal|description=Branch to line c if a <= b and store next line number in ra|syntax=bleal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=blez|description=Branch to line b if a <= 0|syntax=blez a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=brlez|description=Relative branch to line b if a <= 0|syntax=brlez a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=blezal|description=Branch to line b if a <= 0 and store next line number in ra|syntax=blezal a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=blt|description=Branch to line c if a < b|syntax=blt a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)
+|example=
+An example of a '''Schmitt''' trigger, turning on a device if the temperature is too low, and turning it off if it's too high and finally
+doing nothing if the temperature is within the desired range.
+{{ICCode|
+alias sensor d0
+alias device d1
+
+define mintemp 293.15
+define maxtemp 298.15
+
+start:
+yield
+l r0 sensor Temperature
+# If the temperature < mintemp, turn on the device
+blt r0 mintemp turnOn
+# If the temperature > maxtemp, turn off the device
+bgt r0 maxtemp turnOff
+j start
+
+turnOn:
+s device On 1
+j start
+turnOff:
+s device On 0
+j start
+}}}}
+{{ICInstruction|instruction=brlt|description=Relative branch to line c if a < b|syntax=brlt a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bltal|description=Branch to line c if a < b and store next line number in ra|syntax=bltal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bltz|description=Branch to line b if a < 0|syntax=bltz a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=brltz|description=Relative branch to line b if a < 0|syntax=brltz a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bltzal|description=Branch to line b if a < 0 and store next line number in ra|syntax=bltzal a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bna|description=Branch to line d if abs(a - b) > max(c * max(abs(a), abs(b)), float.epsilon * 8)|syntax=bna a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num) d(r?{{!}}num)}}
+{{ICInstruction|instruction=brna|description=Relative branch to line d if abs(a - b) > max(c * max(abs(a), abs(b)), float.epsilon * 8)|syntax=brna a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num) d(r?{{!}}num)}}
+{{ICInstruction|instruction=bnaal|description=Branch to line d if abs(a - b) <= max(c * max(abs(a), abs(b)), float.epsilon * 8) and store next line number in ra|syntax=bnaal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num) d(r?{{!}}num)}}
+{{ICInstruction|instruction=bnan|description=Branch to line b if a is not a number (NaN)|syntax=bnan a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=brnan|description=Relative branch to line b if a is not a number (NaN)|syntax=brnan a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bnaz|description=Branch to line c if abs(a) > max (b * abs(a), float.epsilon * 8)|syntax=bnaz a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=brnaz|description=Relative branch to line c if abs(a) > max(b * abs(a), float.epsilon * 8)|syntax=brnaz a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bnazal|description=Branch to line c if abs(a) > max (b * abs(a), float.epsilon * 8) and store next line number in ra|syntax=bnazal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bne|description=Branch to line c if a != b|syntax=bne a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=brne|description=Relative branch to line c if a != b|syntax=brne a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bneal|description=Branch to line c if a != b and store next line number in ra|syntax=bneal a(r?{{!}}num) b(r?{{!}}num) c(r?{{!}}num)}}
+{{ICInstruction|instruction=bnez|description=branch to line b if a != 0|syntax=bnez a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=brnez|description=Relative branch to line b if a != 0|syntax=brnez a(r?{{!}}num) b(r?{{!}}num)}}
+{{ICInstruction|instruction=bnezal|description=Branch to line b if a != 0 and store next line number in ra|syntax=bnezal a(r?{{!}}num) b(r?{{!}}num)}}
