@@ -30,8 +30,13 @@ The official wiki can lag behind the game. For accurate, up-to-date data on
 gases, chemistry, and other game systems, prefer this repository:
 
 - https://github.com/SixFive7/StationeersPlus/tree/master/Research
-- Gas-phase data specifically:
-  https://github.com/SixFive7/StationeersPlus/blob/master/Research/GameSystems/ChemistryGasPhaseData.md
+- Gas-phase data specifically: https://github.com/SixFive7/StationeersPlus/blob/master/Research/GameSystems/ChemistryGasPhaseData.md
+- The same author has also created a website to make this data easily browsable: https://stationeers.huisman.io, it also includes a couple of useful tools:
+  - Device ports: https://stationeers.huisman.io/tools/device-ports/index.html
+  - Phase diagram: https://stationeers.huisman.io/tools/phase-diagram/
+
+
+There is also this website: 
 
 ## Gases
 
