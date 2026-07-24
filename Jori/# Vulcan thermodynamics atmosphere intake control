@@ -59,7 +59,7 @@ sb Lights On r0                  # Turn all lights on
 sb Computers On r0               # Turn all computers on
 sb Signs On r0                   # Turn all signs on
 
-# Evaporate at max speed if below target temperature
+# Evaporate at max speed if above target temperature
 add r0 TargetTemperature 273.1    # Get target in kelvin
 lb r1 Tanks Temperature Sum       # Get tank temperature
 sgt r0 r1 r0                      # Check if we are too hot
