@@ -1,0 +1,51 @@
+# Vulcan emergency atmospheric purge control system
+
+# Device namings
+# Emergency Atmospheric Purge Lever
+
+# Variables
+define LeverGrace 2 # Grace time to open the second lever
+
+# Device definitions
+define Levers          1220484876 # Levers
+define FlashingLights -1535893860 # Flashing light
+define Vents          -0785498334 # Large powered vents
+define Proximities     0568800213 # Proximity sensors
+define Lights         -0444430760 # Small flood lights
+define Computers      -0405593895 # Retro computers
+
+# Setup
+sb FlashingLights Lock 1         # Lock manual controls
+sb FlashingLights On 0           # Disable
+sb Vents Lock 1                  # Lock manual controls
+sb Vents Mode 1                  # Inward
+sb Vents PressureExternal 100000 # Unlimit the vent
+sb Vents On 0                    # Disable
+sb Proximities Setting 3         # Somebody is close
+
+# Run program just once per tick
+start:
+yield
+
+# User proximity device (de)activation
+lb r0 Proximities Activate Sum # If somebody is near
+sb Lights On r0                # Turn all lights on
+sb Computers On r0             # Turn all computers on
+
+# Emergency atmosphere purge
+lb r0 Levers Open Sum   # Read open levers
+sge r1 r0 2             # Two levers?
+sb FlashingLights On r1 # Two levers: Turn on the warning light
+sb Vents On r1          # Two levers: Turn on the vent
+bne r0 1 start          # Not one lever: Reset program
+sleep LeverGrace        # Grace time to open the second lever
+lb r0 Levers Open Sum   # Read open levers
+sge r1 r0 2             # Two levers?
+sb FlashingLights On r1 # Two levers: Turn on the warning light
+sb Vents On r1          # Two levers: Turn on the vent
+bnez r1 start           # Two levers: Reset program
+sb Levers Open 0        # Reset the levers
+
+j start # Repeat program
+# Max line width
+##########################################################################################
