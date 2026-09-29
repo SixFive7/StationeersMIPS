@@ -1,0 +1,6 @@
+{
+  "claudeMdExcludes": ["**/!(.claude)/CLAUDE.md", "**/CLAUDE.local.md", "**/.work/**"],
+  "permissions": {
+    "deny": ["Edit(/**/CLAUDE.md)", "Edit(/**/CLAUDE.local.md)"]
+  }
+}
